@@ -1,14 +1,8 @@
 {
   "books": [
     {
-      "file": "Der Hobbit (Tolkien, John R R) (z-library.sk, 1lib.sk, z-lib.sk).epub",
-      "title": "Der Hobbit",
-      "author": "J. R. R. Tolkien"
-    },
-    {
-      "file": "Du musst nicht von allen gemocht werden Vom Mut, sich nicht zu verbiegen (Ichiro Kishimi  Fumitake Koga) (z-library.sk, 1lib.sk, z-lib.sk).epub",
-      "title": "Du musst nicht von allen gemocht werden",
-      "author": "Ichiro Kishimi & Fumitake Koga"
+      "file": "pg19596-images-3.epub",
+      "title": "Charles Fourier: Sein Leben und seine Theorien"
     }
   ]
 }
