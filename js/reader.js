@@ -40,6 +40,43 @@ export function initReader(refs, exitCallback) {
   });
 
   initSwipe();
+  initChrome();
+}
+
+// Apple Books–style auto-hiding chrome (mobile): a generic tap on the page
+// toggles the header; it also auto-hides after 5s of inactivity. On desktop the
+// header is always shown via CSS, so toggling the class is a harmless no-op.
+let chromeTimer = null;
+
+function showChrome() {
+  els.view.classList.add("chrome-visible");
+  clearTimeout(chromeTimer);
+  chromeTimer = setTimeout(hideChrome, 5000);
+}
+
+function hideChrome() {
+  els.view.classList.remove("chrome-visible");
+  clearTimeout(chromeTimer);
+}
+
+function toggleChrome() {
+  if (els.view.classList.contains("chrome-visible")) hideChrome();
+  else showChrome();
+}
+
+function initChrome() {
+  // Generic tap on the reading area toggles the header.
+  els.viewport.addEventListener("click", (e) => {
+    if (e.target.closest(".custom-highlight")) return; // highlight menu handles it
+    if (e.target.closest(".page-button")) return; // flip arrows
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return; // mid text-selection
+    toggleChrome();
+  });
+  // Interacting with the header keeps it alive (resets the 5s timer).
+  els.view.querySelector(".reader-bar")?.addEventListener("click", () => {
+    if (els.view.classList.contains("chrome-visible")) showChrome();
+  });
 }
 
 // Horizontal swipe flips pages (primary flip gesture on touch devices).
@@ -90,6 +127,7 @@ export async function openBook(id) {
   // The view must already be visible so the viewport has real dimensions to
   // measure — the caller (main.js) reveals the reader before calling openBook.
   els.view.classList.remove("hidden");
+  hideChrome(); // start with chrome hidden (Apple Books style, mobile)
   renderChapter(startPage);
 }
 

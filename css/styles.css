@@ -928,8 +928,43 @@ body {
   .book-text {
     font-size: 18px;
   }
+
+  /* Apple Books–style auto-hiding chrome: the header floats over the top of the
+     reader and is hidden by default, revealed by a tap (handled in reader.js).
+     Only the ‹ back button and the two tools show; title/author are removed. */
   .reader-bar {
-    padding: 10px 12px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    padding: 6px 8px;
+    grid-template-columns: auto 1fr auto;
+    border-bottom: none;
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .reader-view.chrome-visible .reader-bar {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .reader-titles {
+    display: none; /* remove book title + chapter from the mobile header */
+  }
+  .back-label {
+    display: none; /* back button shows just "‹" */
+  }
+  .reader-back {
+    font-size: 26px;
+    padding: 2px 8px;
+  }
+  .reader-tool {
+    height: 32px;
+    width: 36px;
+    font-size: 16px;
   }
   /* Bigger tap target for the selection button on touch. */
   .sel-toolbar {
