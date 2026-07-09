@@ -92,8 +92,10 @@ initWordList(
 initContextMenu(
   {
     reader: $("reader-view"),
+    bookText: $("book-text"),
     menu: $("ctx-menu"),
     popover: $("translation-popover"),
+    selToolbar: $("sel-toolbar"),
     overlay: $("overlay"),
     modal: $("translation-modal"),
     modalWord: $("modal-word"),

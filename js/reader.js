@@ -38,6 +38,40 @@ export function initReader(refs, exitCallback) {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => renderChapter(currentPage), 150);
   });
+
+  initSwipe();
+}
+
+// Horizontal swipe flips pages (primary flip gesture on touch devices).
+function initSwipe() {
+  let startX = 0, startY = 0, active = false;
+  els.viewport.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length !== 1) { active = false; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      active = true;
+    },
+    { passive: true },
+  );
+  els.viewport.addEventListener(
+    "touchend",
+    (e) => {
+      if (!active) return;
+      active = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      // Require a clearly horizontal swipe; ignore taps and vertical scrolls.
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      // Don't flip while the user is selecting text.
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+      flip(dx < 0 ? +1 : -1);
+    },
+    { passive: true },
+  );
 }
 
 export function isOpen() {

@@ -772,6 +772,27 @@ body {
   color: #d33;
 }
 
+.sel-toolbar {
+  position: fixed;
+  z-index: 1000;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 10px 16px;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.sel-toolbar:hover {
+  filter: brightness(1.05);
+}
+
 .translation-popover {
   position: fixed;
   z-index: 1000;
@@ -879,5 +900,40 @@ body {
   }
   .main-scroll {
     padding: 20px;
+  }
+
+  /* Reader: give the text almost the full width. The flip arrows overlay the
+     edges (absolute, out of the flex flow) instead of taking a 64px column
+     each, and horizontal swiping also flips pages. */
+  .reader-stage .page-button {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    z-index: 5;
+    font-size: 26px;
+    color: var(--text-dim);
+    background: transparent;
+  }
+  .reader-stage .page-prev {
+    left: 0;
+  }
+  .reader-stage .page-next {
+    right: 0;
+  }
+  .page-viewport {
+    padding: 20px 30px;
+    margin: 8px 0;
+  }
+  .book-text {
+    font-size: 18px;
+  }
+  .reader-bar {
+    padding: 10px 12px;
+  }
+  /* Bigger tap target for the selection button on touch. */
+  .sel-toolbar {
+    padding: 12px 18px;
+    font-size: 16px;
   }
 }
