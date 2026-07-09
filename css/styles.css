@@ -921,9 +921,19 @@ body {
     bottom: 0;
     width: 34px;
     z-index: 5;
-    font-size: 26px;
-    color: var(--text-dim);
+    /* Invisible tap zones: no arrow glyph, no background, and no tap/press
+       flash — they still flip the page when tapped. */
+    color: transparent;
     background: transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reader-stage .page-button:hover,
+  .reader-stage .page-button:active,
+  .reader-stage .page-button:focus,
+  .reader-stage .page-button:focus-visible {
+    color: transparent;
+    background: transparent;
+    outline: none;
   }
   .reader-stage .page-prev {
     left: 0;
