@@ -182,7 +182,10 @@ function getMaxPage() {
   return Math.max(0, pages - 1);
 }
 
-function renderPage() {
+function renderPage(animate = false) {
+  // Only enable the CSS transition for genuine flips; chapter renders/resizes
+  // pass animate=false so the page snaps into place instead of sliding.
+  els.bookText.classList.toggle("slide", animate);
   els.bookText.style.transform = `translateX(-${currentPage * getPageWidth()}px)`;
   updateProgress();
   persistLocation();
@@ -193,7 +196,7 @@ function flip(dir) {
   if (dir > 0) {
     if (currentPage < getMaxPage()) {
       currentPage++;
-      renderPage();
+      renderPage(true); // slide within chapter
       updateHighlights();
     } else if (chapterIndex < book.chapters.length - 1) {
       chapterIndex++;
@@ -202,7 +205,7 @@ function flip(dir) {
   } else {
     if (currentPage > 0) {
       currentPage--;
-      renderPage();
+      renderPage(true); // slide within chapter
       updateHighlights();
     } else if (chapterIndex > 0) {
       chapterIndex--;

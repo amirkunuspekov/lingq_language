@@ -527,6 +527,16 @@ body {
   text-align: justify;
   hyphens: auto;
 }
+/* Slide animation is applied only during real page flips (the .slide class is
+   added by reader.js), so re-pagination and chapter jumps still snap instantly. */
+.book-text.slide {
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-text.slide {
+    transition: none;
+  }
+}
 
 /* ---- Preserved EPUB/text formatting ---- */
 .book-text p {
