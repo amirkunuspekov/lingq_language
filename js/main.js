@@ -138,6 +138,10 @@ loadFolderBooks()
   })
   .catch((e) => console.error("Folder load failed:", e));
 
-// Cross-device word-list sync (no-op if Supabase isn't configured in config.js).
-// When remote changes arrive, refresh the word list and reader highlights.
-initSync(onDictChange);
+// Cross-device sync (no-op if Supabase isn't configured in config.js):
+//   • dictionary changes -> refresh word list + reader highlights
+//   • reading positions   -> refresh the library ("Reading Now"/continue)
+initSync({
+  onDictChange,
+  onProgressChange: () => renderLibrary(),
+});

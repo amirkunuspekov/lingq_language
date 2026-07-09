@@ -14,12 +14,16 @@ import {
   setSyncPush,
   applyRemoteSet,
   applyRemoteDelete,
+  setProgressPush,
+  applyRemoteProgress,
 } from "./storage.js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const TABLE = "translations";
+const PROGRESS_TABLE = "reading_progress";
 let sb = null;
 let onChange = () => {};
+let onProgressChange = () => {};
 
 export function isConfigured() {
   return (
@@ -33,8 +37,9 @@ export function isConfigured() {
 // Initialize sync. Safe to call always: does nothing (local-only) if not
 // configured, and never throws — a failed CDN/network just leaves the app
 // working offline.
-export async function initSync(changeCallback) {
-  onChange = changeCallback || (() => {});
+export async function initSync(opts = {}) {
+  onChange = opts.onDictChange || (() => {});
+  onProgressChange = opts.onProgressChange || (() => {});
   if (!isConfigured()) {
     console.info("Supabase not configured — running local-only (no sync).");
     return;
@@ -44,8 +49,10 @@ export async function initSync(changeCallback) {
       "https://esm.sh/@supabase/supabase-js@2"
     );
     sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    setSyncPush(pushToRemote); // local changes -> Supabase
-    await reconcile(); // initial two-way sync
+    setSyncPush(pushToRemote); // local dictionary changes -> Supabase
+    setProgressPush(pushProgress); // local reading position -> Supabase
+    await reconcile(); // initial dictionary two-way sync
+    await reconcileProgress(); // initial reading-position pull
     subscribeRealtime(); // live updates from other devices
   } catch (e) {
     console.error("Sync init failed — continuing local-only:", e);
@@ -92,6 +99,48 @@ async function pushToRemote(op, word, translation) {
   if (error) console.error("Sync push failed for", word, error);
 }
 
+// ---- Reading position ------------------------------------------------------
+
+// Pull all remote reading positions into the local library (books not present
+// locally are skipped inside applyRemoteProgress).
+async function reconcileProgress() {
+  const { data, error } = await sb
+    .from(PROGRESS_TABLE)
+    .select("book_id, chapter, page");
+  if (error) {
+    console.error("Progress pull failed:", error);
+    return;
+  }
+  for (const row of data) {
+    await applyRemoteProgress(row.book_id, {
+      chapter: row.chapter ?? 0,
+      page: row.page ?? 0,
+    });
+  }
+  onProgressChange();
+}
+
+// updateLocation fires on every page flip, so coalesce rapid flips into a
+// single upsert per book (~1.5s after the last flip).
+const progressTimers = new Map();
+function pushProgress(bookId, location) {
+  if (!sb) return;
+  clearTimeout(progressTimers.get(bookId));
+  progressTimers.set(
+    bookId,
+    setTimeout(async () => {
+      progressTimers.delete(bookId);
+      const { error } = await sb.from(PROGRESS_TABLE).upsert({
+        book_id: bookId,
+        chapter: location.chapter ?? 0,
+        page: location.page ?? 0,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) console.error("Progress push failed for", bookId, error);
+    }, 1500),
+  );
+}
+
 function subscribeRealtime() {
   sb.channel("translations-changes")
     .on(
@@ -106,6 +155,22 @@ function subscribeRealtime() {
           applyRemoteSet(row.word, row.translation);
         }
         onChange();
+      },
+    )
+    .subscribe();
+
+  sb.channel("progress-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: PROGRESS_TABLE },
+      async (payload) => {
+        const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
+        if (!row || !row.book_id) return;
+        await applyRemoteProgress(row.book_id, {
+          chapter: row.chapter ?? 0,
+          page: row.page ?? 0,
+        });
+        onProgressChange();
       },
     )
     .subscribe();

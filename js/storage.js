@@ -65,11 +65,26 @@ export async function deleteBook(id) {
   await reqToPromise(store.delete(id));
 }
 
+// Optional push hook (installed by the sync layer) for reading position.
+let progressPushFn = null;
+export function setProgressPush(fn) {
+  progressPushFn = fn;
+}
+
 export async function updateLocation(id, location) {
   const book = await getBook(id);
   if (!book) return;
   book.lastLocation = location;
   book.lastOpenedAt = Date.now();
+  await putBook(book);
+  if (progressPushFn) progressPushFn(id, location);
+}
+
+// Apply reading position that came from another device (no re-push).
+export async function applyRemoteProgress(id, location) {
+  const book = await getBook(id);
+  if (!book) return; // book not in this device's library
+  book.lastLocation = location;
   await putBook(book);
 }
 
