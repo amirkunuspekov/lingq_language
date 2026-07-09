@@ -11,6 +11,7 @@
   <body>
     <div id="app">
       <!-- Sidebar (Apple Books–style nav) -->
+      <!--Test gitignore-->
       <aside id="sidebar">
         <div class="brand">
           <span class="brand-icon">📖</span>
@@ -25,8 +26,16 @@
           </button>
         </nav>
         <button id="import-btn" class="import-btn">＋ Import Book</button>
-        <input id="file-input" type="file" accept=".epub,.txt" multiple hidden />
-        <p class="sidebar-foot">EPUB &amp; text · click a word, right-click to translate</p>
+        <input
+          id="file-input"
+          type="file"
+          accept=".epub,.txt"
+          multiple
+          hidden
+        />
+        <p class="sidebar-foot">
+          EPUB &amp; text · click a word, right-click to translate
+        </p>
       </aside>
 
       <!-- Library view -->
@@ -41,7 +50,10 @@
         <div id="library-empty" class="empty-state hidden">
           <p class="empty-emoji">📚</p>
           <p>Your library is empty.</p>
-          <p class="empty-sub">Click <strong>Import Book</strong> or drop an <code>.epub</code> / <code>.txt</code> file here.</p>
+          <p class="empty-sub">
+            Click <strong>Import Book</strong> or drop an <code>.epub</code> /
+            <code>.txt</code> file here.
+          </p>
         </div>
         <div id="book-grid" class="book-grid"></div>
       </main>
@@ -55,15 +67,26 @@
             <button id="wl-export" class="ghost-btn">⇩ Export CSV</button>
           </div>
         </header>
-        <input id="wl-search" class="wl-search" type="search" placeholder="Search words or translations…" />
+        <input
+          id="wl-search"
+          class="wl-search"
+          type="search"
+          placeholder="Search words or translations…"
+        />
         <div id="wl-empty" class="empty-state">
           <p class="empty-emoji">🗂️</p>
           <p>No translated words yet.</p>
-          <p class="empty-sub">Open a book, select a word, and right-click to add a translation.</p>
+          <p class="empty-sub">
+            Open a book, select a word, and right-click to add a translation.
+          </p>
         </div>
         <table id="wl-table" class="wl-table hidden">
           <thead>
-            <tr><th>Word</th><th>Translation</th><th></th></tr>
+            <tr>
+              <th>Word</th>
+              <th>Translation</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody id="wl-tbody"></tbody>
         </table>
@@ -78,17 +101,33 @@
             <span id="reader-chapter" class="reader-chapter"></span>
           </div>
           <div class="reader-tools">
-            <button id="reader-contents" class="reader-tool" title="Contents">☰</button>
-            <button id="reader-aa" class="reader-tool" title="Appearance">Aa</button>
+            <button id="reader-contents" class="reader-tool" title="Contents">
+              ☰
+            </button>
+            <button id="reader-aa" class="reader-tool" title="Appearance">
+              Aa
+            </button>
           </div>
         </header>
 
         <div class="reader-stage">
-          <button class="page-button page-prev" id="flip-backward" aria-label="Previous page">‹</button>
+          <button
+            class="page-button page-prev"
+            id="flip-backward"
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
           <div id="page-viewport" class="page-viewport">
             <div id="book-text" class="book-text"></div>
           </div>
-          <button class="page-button page-next" id="flip-forward" aria-label="Next page">›</button>
+          <button
+            class="page-button page-next"
+            id="flip-forward"
+            aria-label="Next page"
+          >
+            ›
+          </button>
         </div>
 
         <footer class="reader-foot">
