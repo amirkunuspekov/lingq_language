@@ -5,6 +5,7 @@ import { initLibrary, render as renderLibrary } from "./library.js";
 import { initReader, openBook, refreshHighlights } from "./reader.js";
 import { initWordList, render as renderWordList } from "./dictionary.js";
 import { initContextMenu } from "./contextmenu.js";
+import { loadFolderBooks } from "./folder.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -125,5 +126,11 @@ $("reader-aa").addEventListener("click", () => {
 });
 document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
 
-// Start on the library.
+// Start on the library (shows any cached books immediately), then pull in books
+// from the committed books/ folder and re-render when new ones are added.
 showMain("library");
+loadFolderBooks()
+  .then((added) => {
+    if (added > 0) renderLibrary();
+  })
+  .catch((e) => console.error("Folder load failed:", e));

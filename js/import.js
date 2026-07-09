@@ -125,8 +125,9 @@ async function importTxt(file) {
   };
 }
 
-// Import one File -> persisted book. Returns the stored book object.
-export async function importFile(file) {
+// Parse a File into a full book record (cover as a data-URL string) WITHOUT
+// storing it. `id` is caller-supplied so the folder loader can use stable ids.
+export async function parseToBook(file, id) {
   const name = file.name.toLowerCase();
   let parsed;
   if (name.endsWith(".epub")) {
@@ -142,8 +143,8 @@ export async function importFile(file) {
     ? await blobToDataURL(parsed.coverBlob)
     : generateCover(parsed.title, parsed.author);
 
-  const book = {
-    id: makeId(),
+  return {
+    id,
     title: parsed.title,
     author: parsed.author,
     format: parsed.format,
@@ -153,6 +154,11 @@ export async function importFile(file) {
     lastOpenedAt: 0,
     lastLocation: { chapter: 0, page: 0 },
   };
+}
+
+// Import one user-picked File -> persisted book (random id). Returns the book.
+export async function importFile(file) {
+  const book = await parseToBook(file, makeId());
   await putBook(book);
   return book;
 }

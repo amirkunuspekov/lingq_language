@@ -134,6 +134,13 @@ function bookCard(book) {
   });
   card.addEventListener("contextmenu", async (e) => {
     e.preventDefault();
+    if (book.source === "folder") {
+      alert(
+        `“${book.title}” is managed by the books/ folder.\n` +
+          `To remove it, delete its file from books/ and update books/index.json.`,
+      );
+      return;
+    }
     if (confirm(`Remove “${book.title}” from your library?`)) {
       await deleteBook(book.id);
       await render();
