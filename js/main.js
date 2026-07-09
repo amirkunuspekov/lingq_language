@@ -6,6 +6,7 @@ import { initReader, openBook, refreshHighlights } from "./reader.js";
 import { initWordList, render as renderWordList } from "./dictionary.js";
 import { initContextMenu } from "./contextmenu.js";
 import { loadFolderBooks } from "./folder.js";
+import { initSync } from "./sync.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -136,3 +137,7 @@ loadFolderBooks()
     if (added > 0) renderLibrary();
   })
   .catch((e) => console.error("Folder load failed:", e));
+
+// Cross-device word-list sync (no-op if Supabase isn't configured in config.js).
+// When remote changes arrive, refresh the word list and reader highlights.
+initSync(onDictChange);

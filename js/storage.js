@@ -100,16 +100,39 @@ export function getDict() {
   return dict;
 }
 
+// Optional push hook installed by the sync layer. Called after a LOCAL change
+// so it can be propagated to Supabase. Remote-originated changes use the
+// applyRemote* helpers below, which deliberately do NOT call this (no loops).
+let pushFn = null;
+export function setSyncPush(fn) {
+  pushFn = fn;
+}
+
 export function setEntry(word, translation) {
-  dict[word.toLowerCase()] = translation;
+  const w = word.toLowerCase();
+  dict[w] = translation;
   persistDict();
+  if (pushFn) pushFn("set", w, translation);
 }
 
 export function deleteEntry(word) {
-  delete dict[word.toLowerCase()];
+  const w = word.toLowerCase();
+  delete dict[w];
   persistDict();
+  if (pushFn) pushFn("delete", w);
 }
 
 export function hasEntry(word) {
   return Object.prototype.hasOwnProperty.call(dict, word.toLowerCase());
+}
+
+// Apply a change that came FROM the server (no re-push).
+export function applyRemoteSet(word, translation) {
+  dict[word.toLowerCase()] = translation;
+  persistDict();
+}
+
+export function applyRemoteDelete(word) {
+  delete dict[word.toLowerCase()];
+  persistDict();
 }
