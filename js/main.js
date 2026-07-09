@@ -1,0 +1,129 @@
+// main.js — bootstrap: gather DOM references, wire the three views
+// (library, word list, reader) and route between them.
+
+import { initLibrary, render as renderLibrary } from "./library.js";
+import { initReader, openBook, refreshHighlights } from "./reader.js";
+import { initWordList, render as renderWordList } from "./dictionary.js";
+import { initContextMenu } from "./contextmenu.js";
+
+const $ = (id) => document.getElementById(id);
+
+// ---- Views / routing -------------------------------------------------------
+
+const libraryView = $("library-view");
+const wordlistView = $("wordlist-view");
+const readerView = $("reader-view");
+const sidebar = $("sidebar");
+
+function showMain(view) {
+  // Library and Word List share the sidebar layout; the reader is fullscreen.
+  readerView.classList.add("hidden");
+  sidebar.classList.remove("hidden");
+  libraryView.classList.toggle("hidden", view !== "library");
+  wordlistView.classList.toggle("hidden", view !== "wordlist");
+  $("nav-library").classList.toggle("active", view === "library");
+  $("nav-wordlist").classList.toggle("active", view === "wordlist");
+  if (view === "wordlist") renderWordList();
+  if (view === "library") renderLibrary();
+}
+
+function showReader() {
+  libraryView.classList.add("hidden");
+  wordlistView.classList.add("hidden");
+  sidebar.classList.add("hidden");
+  readerView.classList.remove("hidden");
+}
+
+// ---- Wire modules ----------------------------------------------------------
+
+// When the dictionary changes anywhere, re-apply reader highlights and refresh
+// the word list so both stay in sync.
+function onDictChange() {
+  refreshHighlights();
+  renderWordList();
+}
+
+initLibrary(
+  {
+    view: libraryView,
+    grid: $("book-grid"),
+    hero: $("reading-now"),
+    emptyState: $("library-empty"),
+    importBtn: $("import-btn"),
+    fileInput: $("file-input"),
+  },
+  async (id) => {
+    showReader(); // reveal first so the reader viewport can be measured
+    await openBook(id);
+  },
+);
+
+initReader(
+  {
+    view: readerView,
+    viewport: $("page-viewport"),
+    bookText: $("book-text"),
+    title: $("reader-title"),
+    chapterLabel: $("reader-chapter"),
+    pageCount: $("page-count"),
+    progressFill: $("reader-progress-fill"),
+    flipForward: $("flip-forward"),
+    flipBackward: $("flip-backward"),
+    back: $("reader-back"),
+    contentsPanel: $("contents-panel"),
+    contentsList: $("contents-list"),
+  },
+  () => showMain("library"),
+);
+
+initWordList(
+  {
+    search: $("wl-search"),
+    tbody: $("wl-tbody"),
+    table: $("wl-table"),
+    empty: $("wl-empty"),
+    count: $("wl-count"),
+    exportBtn: $("wl-export"),
+  },
+  onDictChange,
+);
+
+initContextMenu(
+  {
+    reader: $("reader-view"),
+    menu: $("ctx-menu"),
+    popover: $("translation-popover"),
+    overlay: $("overlay"),
+    modal: $("translation-modal"),
+    modalWord: $("modal-word"),
+    modalInput: $("modal-input"),
+    modalSave: $("modal-save"),
+  },
+  onDictChange,
+);
+
+// ---- Nav + misc ------------------------------------------------------------
+
+$("nav-library").addEventListener("click", () => showMain("library"));
+$("nav-wordlist").addEventListener("click", () => showMain("wordlist"));
+
+// Contents (table of contents) panel toggle inside the reader.
+$("reader-contents").addEventListener("click", () => {
+  $("contents-panel").classList.toggle("hidden");
+});
+$("contents-close")?.addEventListener("click", () => {
+  $("contents-panel").classList.add("hidden");
+});
+
+// Appearance (theme) cycle: light -> sepia -> dark.
+const THEMES = ["light", "sepia", "dark"];
+$("reader-aa").addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme || "light";
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("theme", next);
+});
+document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+
+// Start on the library.
+showMain("library");
