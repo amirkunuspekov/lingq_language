@@ -17,7 +17,7 @@ import {
   setProgressPush,
   applyRemoteProgress,
 } from "./storage.js";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { getClient, isConfigured } from "./supabaseClient.js";
 
 const TABLE = "translations";
 const PROGRESS_TABLE = "reading_progress";
@@ -25,18 +25,10 @@ let sb = null;
 let onChange = () => {};
 let onProgressChange = () => {};
 
-export function isConfigured() {
-  return (
-    SUPABASE_URL &&
-    SUPABASE_ANON_KEY &&
-    !SUPABASE_URL.includes("YOUR_") &&
-    !SUPABASE_ANON_KEY.includes("YOUR_")
-  );
-}
+export { isConfigured };
 
-// Initialize sync. Safe to call always: does nothing (local-only) if not
-// configured, and never throws — a failed CDN/network just leaves the app
-// working offline.
+// Initialize per-user sync AFTER the user is signed in (RLS scopes every row to
+// auth.uid()). Safe to call when unconfigured (no-op) and never throws.
 export async function initSync(opts = {}) {
   onChange = opts.onDictChange || (() => {});
   onProgressChange = opts.onProgressChange || (() => {});
@@ -45,10 +37,8 @@ export async function initSync(opts = {}) {
     return;
   }
   try {
-    const { createClient } = await import(
-      "https://esm.sh/@supabase/supabase-js@2"
-    );
-    sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    sb = await getClient();
+    if (!sb) return;
     setSyncPush(pushToRemote); // local dictionary changes -> Supabase
     setProgressPush(pushProgress); // local reading position -> Supabase
     await reconcile(); // initial dictionary two-way sync

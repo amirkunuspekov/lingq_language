@@ -93,13 +93,20 @@ export function makeId() {
   return "b_" + Math.random().toString(36).slice(2, 10) + "_" + performance.now().toFixed(0);
 }
 
-// ---- Dictionary (global word -> translation) -------------------------------
+// ---- Dictionary (per-user word -> translation) -----------------------------
+// The dictionary cache is keyed by the signed-in user so that different users
+// on the same browser never see each other's words. `null` = local-only mode.
 
+let activeUser = null;
 let dict = loadDict();
+
+function dictKey() {
+  return activeUser ? `${DICT_KEY}:${activeUser}` : DICT_KEY;
+}
 
 function loadDict() {
   try {
-    const raw = localStorage.getItem(DICT_KEY);
+    const raw = localStorage.getItem(dictKey());
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -107,7 +114,18 @@ function loadDict() {
 }
 
 function persistDict() {
-  localStorage.setItem(DICT_KEY, JSON.stringify(dict));
+  localStorage.setItem(dictKey(), JSON.stringify(dict));
+}
+
+// Switch the active user; reloads that user's cached dictionary into memory.
+// Call on sign-in (with the user id) and sign-out (with null).
+export function setActiveUser(userId) {
+  activeUser = userId || null;
+  dict = loadDict();
+}
+
+export function getActiveUser() {
+  return activeUser;
 }
 
 // Returns the live in-memory dictionary object. Keys are lowercased words.

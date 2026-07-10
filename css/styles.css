@@ -160,6 +160,80 @@ body {
   color: var(--text-dim);
 }
 
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.whoami {
+  font-size: 12px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sign-out {
+  width: 100%;
+}
+
+/* ---- Auth gate ---- */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+.auth-card {
+  width: min(380px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 700;
+}
+.auth-sub {
+  margin: 0 0 8px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.auth-card input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  background: var(--bg);
+  color: var(--text);
+}
+.auth-card input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+.auth-btn {
+  width: 100%;
+}
+.auth-error {
+  margin: 0;
+  color: #d33;
+  font-size: 13px;
+}
+
 /* ---- Main views ----------------------------------------------- */
 
 .main-scroll {

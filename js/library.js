@@ -7,6 +7,17 @@ import { importFiles } from "./import.js";
 
 let els = null;
 let onOpenBook = () => {};
+// Context supplied by main.js so the library can scope to the current user and
+// propagate imports/deletes to the cloud.
+let ctx = {
+  getOwnerId: () => null, // current user's id, or null in local-only mode
+  onImported: () => {}, // (book) => push to cloud
+  onDeleted: () => {}, // (id)   => remove from cloud
+};
+
+export function setLibraryContext(context) {
+  ctx = { ...ctx, ...context };
+}
 
 export function initLibrary(refs, openBookCallback) {
   els = refs;
@@ -16,10 +27,7 @@ export function initLibrary(refs, openBookCallback) {
   els.fileInput.addEventListener("change", async (e) => {
     const files = [...e.target.files];
     e.target.value = "";
-    if (files.length) {
-      await importFiles(files);
-      await render();
-    }
+    await handleImport(files);
   });
 
   // Drag & drop anywhere on the library.
@@ -36,11 +44,17 @@ export function initLibrary(refs, openBookCallback) {
     const files = [...e.dataTransfer.files].filter((f) =>
       /\.(epub|txt)$/i.test(f.name),
     );
-    if (files.length) {
-      await importFiles(files);
-      await render();
-    }
+    await handleImport(files);
   });
+}
+
+async function handleImport(files) {
+  if (!files.length) return;
+  const owner = ctx.getOwnerId();
+  const books = await importFiles(files, { owner });
+  // Push each new book to the user's cloud library (no-op when local-only).
+  if (owner) for (const book of books) ctx.onImported(book);
+  await render();
 }
 
 // Cover is stored as a data-URL string on the book — use it directly.
@@ -52,8 +66,17 @@ function coverUrl(book) {
   return "";
 }
 
+// Which books to show: the shared folder shelf, plus books owned by the current
+// user. When logged out (local mode), show folder books and un-owned local ones.
+function visibleTo(book, ownerId) {
+  if (book.source === "folder") return true;
+  if (ownerId) return book.owner === ownerId;
+  return !book.owner; // local-only: hide any user-owned books
+}
+
 export async function render() {
-  const books = await getAllBooks();
+  const ownerId = ctx.getOwnerId();
+  const books = (await getAllBooks()).filter((b) => visibleTo(b, ownerId));
 
   // Reading Now hero = most recently opened book (if any).
   const hero = books.find((b) => b.lastOpenedAt) || books[0];
@@ -143,6 +166,7 @@ function bookCard(book) {
     }
     if (confirm(`Remove “${book.title}” from your library?`)) {
       await deleteBook(book.id);
+      if (book.owner) ctx.onDeleted(book.id); // remove from cloud too
       await render();
     }
   });

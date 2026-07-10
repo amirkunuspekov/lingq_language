@@ -1,12 +1,24 @@
 // main.js — bootstrap: gather DOM references, wire the three views
 // (library, word list, reader) and route between them.
 
-import { initLibrary, render as renderLibrary } from "./library.js";
+import {
+  initLibrary,
+  render as renderLibrary,
+  setLibraryContext,
+} from "./library.js";
 import { initReader, openBook, refreshHighlights } from "./reader.js";
 import { initWordList, render as renderWordList } from "./dictionary.js";
 import { initContextMenu } from "./contextmenu.js";
 import { loadFolderBooks } from "./folder.js";
 import { initSync } from "./sync.js";
+import { initAuth } from "./auth.js";
+import { setActiveUser } from "./storage.js";
+import {
+  pullBooks,
+  uploadBook,
+  deleteBookRemote,
+  initBooksRealtime,
+} from "./booksync.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -129,19 +141,43 @@ $("reader-aa").addEventListener("click", () => {
 });
 document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
 
-// Start on the library (shows any cached books immediately), then pull in books
-// from the committed books/ folder and re-render when new ones are added.
-showMain("library");
-loadFolderBooks()
-  .then((added) => {
-    if (added > 0) renderLibrary();
-  })
-  .catch((e) => console.error("Folder load failed:", e));
+// Give the library the current-user context so imports/deletes reach the cloud.
+setLibraryContext({
+  getOwnerId: () => currentUser?.id || null,
+  onImported: (book) => uploadBook(book),
+  onDeleted: (id) => deleteBookRemote(id),
+});
 
-// Cross-device sync (no-op if Supabase isn't configured in config.js):
-//   • dictionary changes -> refresh word list + reader highlights
-//   • reading positions   -> refresh the library ("Reading Now"/continue)
-initSync({
-  onDictChange,
-  onProgressChange: () => renderLibrary(),
+let currentUser = null;
+
+// Start the app for a signed-in user (or null in local-only mode). Runs once
+// per session; sign-out reloads the page, which is the reliable teardown.
+async function startApp(user) {
+  currentUser = user;
+  setActiveUser(user?.id || null); // scope the dictionary cache to this user
+
+  showMain("library"); // shows cached books immediately
+
+  // Shared folder shelf (always), then the user's own cloud books.
+  await loadFolderBooks().catch((e) => console.error("Folder load failed:", e));
+  if (user) {
+    await pullBooks(user.id, renderLibrary).catch((e) =>
+      console.error("Book pull failed:", e),
+    );
+  }
+  renderLibrary();
+
+  // Cross-device sync for words + reading position (scoped to this user by RLS).
+  await initSync({
+    onDictChange,
+    onProgressChange: () => renderLibrary(),
+  });
+  if (user) initBooksRealtime(user.id, renderLibrary);
+}
+
+// Auth gate: if Supabase is configured, this shows a login screen and calls
+// startApp once signed in; otherwise it calls startApp(null) immediately.
+initAuth({
+  onAuth: (user) => startApp(user),
+  onSignOut: () => location.reload(),
 });

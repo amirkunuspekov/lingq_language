@@ -9,7 +9,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   </head>
   <body>
-    <div id="app">
+    <!-- Auth gate (shown only when Supabase is configured and no session) -->
+    <div id="auth-gate" class="auth-gate hidden">
+      <form id="auth-form" class="auth-card">
+        <div class="auth-brand"><span>📖</span> Books</div>
+        <p class="auth-sub">Sign in to sync your books &amp; words across devices</p>
+        <input id="auth-email" type="email" placeholder="Email" autocomplete="email" required />
+        <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" minlength="6" required />
+        <p id="auth-error" class="auth-error hidden"></p>
+        <button id="auth-signin" type="submit" class="primary-btn auth-btn">Sign in</button>
+        <button id="auth-signup" type="button" class="ghost-btn auth-btn">Create account</button>
+      </form>
+    </div>
+
+    <div id="app" class="hidden">
       <!-- Sidebar (Apple Books–style nav) -->
       <aside id="sidebar">
         <div class="brand">
@@ -27,6 +40,10 @@
         <button id="import-btn" class="import-btn">＋ Import Book</button>
         <input id="file-input" type="file" accept=".epub,.txt" multiple hidden />
         <p class="sidebar-foot">EPUB &amp; text · click a word, right-click to translate</p>
+        <div class="account">
+          <span id="whoami" class="whoami"></span>
+          <button id="sign-out" class="ghost-btn sign-out hidden">Sign out</button>
+        </div>
       </aside>
 
       <!-- Library view -->

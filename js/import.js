@@ -156,18 +156,21 @@ export async function parseToBook(file, id) {
   };
 }
 
-// Import one user-picked File -> persisted book (random id). Returns the book.
-export async function importFile(file) {
-  const book = await parseToBook(file, makeId());
+// Import one user-picked File -> persisted book. When signed in, the book gets
+// a UUID id and an owner so it can sync to that user's cloud library.
+export async function importFile(file, { owner = null } = {}) {
+  const id = owner ? crypto.randomUUID() : makeId();
+  const book = await parseToBook(file, id);
+  if (owner) book.owner = owner;
   await putBook(book);
   return book;
 }
 
-export async function importFiles(fileList) {
+export async function importFiles(fileList, opts = {}) {
   const results = [];
   for (const file of fileList) {
     try {
-      results.push(await importFile(file));
+      results.push(await importFile(file, opts));
     } catch (err) {
       console.error("Import failed for", file.name, err);
       alert(`Could not import "${file.name}": ${err.message}`);
