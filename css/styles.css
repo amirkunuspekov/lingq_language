@@ -617,22 +617,9 @@ body {
   font-size: 20px;
   line-height: 1.65;
   color: var(--reader-text);
-  margin-left: 0;
   padding: 0;
   text-align: justify;
   hyphens: auto;
-}
-/* Slide animation is applied only during real page flips (the .slide class is
-   added by reader.js), so re-pagination and chapter jumps still snap instantly.
-   We animate margin-left (not transform): iOS Safari won't render text-selection
-   UI on transform-shifted content, so pages are positioned by margin instead. */
-.book-text.slide {
-  transition: margin-left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .book-text.slide {
-    transition: none;
-  }
 }
 
 /* ---- Preserved EPUB/text formatting ---- */
