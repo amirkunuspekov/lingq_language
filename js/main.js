@@ -175,6 +175,37 @@ async function startApp(user) {
   if (user) initBooksRealtime(user.id, renderLibrary);
 }
 
+// ---- Stale-tab refresh (iPhone Safari) -------------------------------------
+// Safari keeps a backgrounded tab frozen instead of reloading it, so when the
+// user returns after reading on another device the reader still shows the old
+// position and the realtime socket is dead. If the tab has been hidden for 5+
+// minutes, reload on return: this tears down the stale state, re-pulls the
+// synced reading position, and lands the user back on the library (book closed).
+const STALE_AFTER_MS = 5 * 60 * 1000;
+let hiddenAt = 0;
+
+function markHidden() {
+  if (hiddenAt === 0) hiddenAt = Date.now();
+}
+
+function refreshIfStale() {
+  if (hiddenAt && Date.now() - hiddenAt >= STALE_AFTER_MS) {
+    location.reload();
+    return;
+  }
+  hiddenAt = 0;
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) markHidden();
+  else refreshIfStale();
+});
+
+// Safari restores a frozen/bfcached tab via pagehide/pageshow rather than a
+// fresh load, so cover those events too.
+window.addEventListener("pagehide", markHidden);
+window.addEventListener("pageshow", refreshIfStale);
+
 // Auth gate: if Supabase is configured, this shows a login screen and calls
 // startApp once signed in; otherwise it calls startApp(null) immediately.
 initAuth({
