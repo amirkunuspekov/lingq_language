@@ -986,6 +986,31 @@ body {
     padding: 20px;
   }
 
+  /* Reading Now hero: shrink the cover and let the info column shrink so the
+     title wraps and the button stay inside the card instead of overflowing. */
+  .reading-now {
+    gap: 18px;
+    padding: 18px;
+  }
+  .hero-cover {
+    width: 92px;
+  }
+  .hero-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .hero-title {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+  .hero-author,
+  .hero-meta {
+    overflow-wrap: anywhere;
+  }
+  .hero-btn {
+    padding: 10px 18px;
+  }
+
   /* Reader: give the text almost the full width. The flip arrows overlay the
      edges (absolute, out of the flex flow) instead of taking a 64px column
      each, and horizontal swiping also flips pages. */
