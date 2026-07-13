@@ -607,7 +607,11 @@ body {
 }
 .page-viewport {
   flex: 1;
-  overflow: hidden;
+  /* Vertical scrolling within a chapter. Momentum scrolling on iOS, and the
+     content column is a single normal flow so every word stays selectable. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 34px 40px;
   margin: 18px 0;
   min-width: 0;
@@ -617,22 +621,9 @@ body {
   font-size: 20px;
   line-height: 1.65;
   color: var(--reader-text);
-  margin-left: 0;
   padding: 0;
   text-align: justify;
   hyphens: auto;
-}
-/* Slide animation is applied only during real page flips (the .slide class is
-   added by reader.js), so re-pagination and chapter jumps still snap instantly.
-   We animate margin-left (not transform): iOS Safari won't render text-selection
-   UI on transform-shifted content, so pages are positioned by margin instead. */
-.book-text.slide {
-  transition: margin-left 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-@media (prefers-reduced-motion: reduce) {
-  .book-text.slide {
-    transition: none;
-  }
 }
 
 /* ---- Preserved EPUB/text formatting ---- */
@@ -1055,34 +1046,11 @@ body {
     padding: 10px 18px;
   }
 
-  /* Reader: give the text almost the full width. The flip arrows overlay the
-     edges (absolute, out of the flex flow) instead of taking a 64px column
-     each, and horizontal swiping also flips pages. */
+  /* Reader: give the text the full width. Chapter changes happen by horizontal
+     swipe (or the Contents menu); the arrow controls are hidden on mobile so an
+     edge tap can't jump chapters while you're scrolling. */
   .reader-stage .page-button {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 34px;
-    z-index: 5;
-    /* Invisible tap zones: no arrow glyph, no background, and no tap/press
-       flash — they still flip the page when tapped. */
-    color: transparent;
-    background: transparent;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .reader-stage .page-button:hover,
-  .reader-stage .page-button:active,
-  .reader-stage .page-button:focus,
-  .reader-stage .page-button:focus-visible {
-    color: transparent;
-    background: transparent;
-    outline: none;
-  }
-  .reader-stage .page-prev {
-    left: 0;
-  }
-  .reader-stage .page-next {
-    right: 0;
+    display: none;
   }
   .page-viewport {
     padding: 20px 30px;

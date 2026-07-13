@@ -1,19 +1,15 @@
-// reader.js — the reading view: chapter rendering, column pagination with
-// translateX windowing, and per-page word highlighting. The pagination and
-// band-highlight logic is ported from the original prototype (archive/prototype)
-// and generalized to render one chapter of the active book at a time.
+// reader.js — the reading view. One chapter is rendered at a time as a single
+// normal-flow column and read by vertical scrolling; left/right (swipe or the
+// arrow controls) move between chapters. Vertical scrolling is used instead of
+// CSS multi-column pagination because iOS Safari cannot select text in the
+// continuation fragment of a paragraph split across columns — with a single
+// scrolling column every word is selectable.
 
 import { getBook, getDict, updateLocation } from "./storage.js";
-
-const GAP = 48; // px between page columns
 
 let els = null; // cached DOM references, filled on init
 let book = null; // active book object
 let chapterIndex = 0;
-let currentPage = 0;
-
-// pageIndex -> Set of words already highlighted on that page.
-let pageHighlightState = new Map();
 
 let onExit = () => {}; // callback to return to library
 
@@ -21,22 +17,43 @@ export function initReader(refs, exitCallback) {
   els = refs;
   onExit = exitCallback;
 
-  els.flipForward.addEventListener("click", () => flip(+1));
-  els.flipBackward.addEventListener("click", () => flip(-1));
+  // The arrow controls now move between chapters (there are no in-chapter pages).
+  els.flipForward.addEventListener("click", () => changeChapter(+1));
+  els.flipBackward.addEventListener("click", () => changeChapter(-1));
   els.back.addEventListener("click", () => onExit());
 
   document.addEventListener("keydown", (e) => {
     if (els.view.classList.contains("hidden")) return;
-    if (e.key === "ArrowRight") flip(+1);
-    else if (e.key === "ArrowLeft") flip(-1);
+    // Left/Right change chapters; Up/Down/space fall through to native scroll.
+    if (e.key === "ArrowRight") changeChapter(+1);
+    else if (e.key === "ArrowLeft") changeChapter(-1);
     else if (e.key === "Escape") onExit();
   });
+
+  // Track scroll: update the progress bar live and persist the position (throttled).
+  let scrollRaf = null;
+  let persistTimer = null;
+  els.viewport.addEventListener(
+    "scroll",
+    () => {
+      if (!book || els.view.classList.contains("hidden")) return;
+      if (!scrollRaf) {
+        scrollRaf = requestAnimationFrame(() => {
+          scrollRaf = null;
+          updateProgress();
+        });
+      }
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(persistLocation, 400);
+    },
+    { passive: true },
+  );
 
   let resizeTimer = null;
   window.addEventListener("resize", () => {
     if (els.view.classList.contains("hidden")) return;
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => renderChapter(currentPage), 150);
+    resizeTimer = setTimeout(() => renderChapter(currentFraction()), 150);
   });
 
   initSwipe();
@@ -68,7 +85,7 @@ function initChrome() {
   // Generic tap on the reading area toggles the header.
   els.viewport.addEventListener("click", (e) => {
     if (e.target.closest(".custom-highlight")) return; // highlight menu handles it
-    if (e.target.closest(".page-button")) return; // flip arrows
+    if (e.target.closest(".page-button")) return; // chapter arrows
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed) return; // mid text-selection
     toggleChrome();
@@ -79,7 +96,8 @@ function initChrome() {
   });
 }
 
-// Horizontal swipe flips pages (primary flip gesture on touch devices).
+// Horizontal swipe changes chapters (vertical drags scroll natively and are
+// ignored here). This is the primary chapter gesture on touch devices.
 function initSwipe() {
   let startX = 0, startY = 0, active = false;
   els.viewport.addEventListener(
@@ -102,10 +120,10 @@ function initSwipe() {
       const dy = t.clientY - startY;
       // Require a clearly horizontal swipe; ignore taps and vertical scrolls.
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      // Don't flip while the user is selecting text.
+      // Don't change chapters while the user is selecting text.
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed) return;
-      flip(dx < 0 ? +1 : -1);
+      changeChapter(dx < 0 ? +1 : -1);
     },
     { passive: true },
   );
@@ -121,14 +139,16 @@ export async function openBook(id) {
   book = await getBook(id);
   if (!book) return;
   chapterIndex = book.lastLocation?.chapter || 0;
-  const startPage = book.lastLocation?.page || 0;
+  // Position within a chapter is stored as a scroll fraction in permille (0–1000)
+  // so it maps across devices/orientations regardless of layout height.
+  const startFraction = (book.lastLocation?.page || 0) / 1000;
   els.title.textContent = book.title;
   buildContentsMenu();
   // The view must already be visible so the viewport has real dimensions to
   // measure — the caller (main.js) reveals the reader before calling openBook.
   els.view.classList.remove("hidden");
   hideChrome(); // start with chrome hidden (Apple Books style, mobile)
-  renderChapter(startPage);
+  renderChapter(startFraction);
 }
 
 function currentChapterHtml() {
@@ -140,98 +160,52 @@ function currentChapterHtml() {
   return "<p>" + esc.replace(/\n\s*\n/g, "</p><p>").replace(/\n/g, "<br>") + "</p>";
 }
 
-// (Re)render the current chapter and move to `page`. Resets highlight state so
-// removed translations disappear and current ones are re-applied.
-function renderChapter(page = 0) {
+// (Re)render the current chapter and scroll to `fraction` (0–1 of the scrollable
+// height). Re-applies highlights so removed translations disappear and current
+// ones show.
+function renderChapter(fraction = 0) {
   els.bookText.innerHTML = currentChapterHtml();
-  // Column height must be the viewport's *content* height (excluding its
-  // padding) or the last line of each page column is clipped behind the padding.
-  const vpStyle = getComputedStyle(els.viewport);
-  const padY = parseFloat(vpStyle.paddingTop) + parseFloat(vpStyle.paddingBottom);
-  const padX = parseFloat(vpStyle.paddingLeft) + parseFloat(vpStyle.paddingRight);
-  const innerH = els.viewport.clientHeight - padY;
-  const colW = els.viewport.clientWidth - padX;
-  // Pin an explicit width equal to one column. Pages are shifted with a negative
-  // margin-left (see renderPage), and on an auto-width block a negative margin
-  // would instead widen the box and re-flow the columns — an explicit width keeps
-  // the column layout fixed so only the position moves.
-  els.bookText.style.width = colW + "px";
-  els.bookText.style.columnWidth = colW + "px";
-  els.bookText.style.columnGap = GAP + "px";
-  els.bookText.style.height = innerH + "px";
-  els.bookText.style.columnFill = "auto";
-
-  pageHighlightState = new Map();
-  currentPage = Math.min(Math.max(0, page), getMaxPage());
-  renderPage();
-  updateHighlights();
+  applyHighlights();
   updateChapterLabel();
+
+  // Restore the scroll position after layout. iOS occasionally needs a second
+  // tick once layout has settled, so re-apply on the next frame.
+  const apply = () => {
+    const scrollable = els.viewport.scrollHeight - els.viewport.clientHeight;
+    els.viewport.scrollTop = Math.max(0, fraction * scrollable);
+    updateProgress();
+  };
+  apply();
+  requestAnimationFrame(apply);
+  persistLocation();
 }
 
 // Re-apply highlights after the dictionary changes (add/remove a word).
 export function refreshHighlights() {
   if (!isOpen()) return;
-  renderChapter(currentPage);
+  renderChapter(currentFraction());
 }
 
-// ---- Pagination (ported) ---------------------------------------------------
-
-function getPageWidth() {
-  // One page = one column width + the gap. Read the column width we set on the
-  // text element so this stays consistent with renderChapter's padding math.
-  const colW = parseFloat(els.bookText.style.columnWidth) || els.viewport.clientWidth;
-  return colW + GAP;
+// Current vertical scroll position as a 0–1 fraction of the scrollable height.
+function currentFraction() {
+  const scrollable = els.viewport.scrollHeight - els.viewport.clientHeight;
+  return scrollable > 0 ? els.viewport.scrollTop / scrollable : 0;
 }
 
-function getMaxPage() {
-  const pages = Math.ceil((els.bookText.scrollWidth - 1) / getPageWidth());
-  return Math.max(0, pages - 1);
-}
+// ---- Chapter navigation ----------------------------------------------------
 
-function renderPage(animate = false) {
-  // Move pages with a negative margin (normal layout) rather than a CSS
-  // transform. iOS Safari fails to render the native text-selection UI (the blue
-  // highlight + drag handles) on transform-shifted content, so selection worked
-  // only on the first page (at offset 0) and intermittently elsewhere. A margin
-  // shift keeps the text at a real layout position, so selection works on every
-  // page. Only enable the CSS transition for genuine flips; chapter
-  // renders/resizes pass animate=false so the page snaps into place.
-  els.bookText.classList.toggle("slide", animate);
-  els.bookText.style.marginLeft = `-${currentPage * getPageWidth()}px`;
-  updateProgress();
-  persistLocation();
-}
-
-// Flip within the chapter, spilling into adjacent chapters at the boundaries.
-function flip(dir) {
-  if (dir > 0) {
-    if (currentPage < getMaxPage()) {
-      currentPage++;
-      renderPage(true); // slide within chapter
-      updateHighlights();
-    } else if (chapterIndex < book.chapters.length - 1) {
-      chapterIndex++;
-      renderChapter(0);
-    }
-  } else {
-    if (currentPage > 0) {
-      currentPage--;
-      renderPage(true); // slide within chapter
-      updateHighlights();
-    } else if (chapterIndex > 0) {
-      chapterIndex--;
-      renderChapter(Number.MAX_SAFE_INTEGER); // land on last page
-    }
-  }
+function changeChapter(dir) {
+  const target = chapterIndex + dir;
+  if (target < 0 || target >= book.chapters.length) return;
+  chapterIndex = target;
+  renderChapter(0);
 }
 
 function updateProgress() {
-  const max = getMaxPage();
-  els.pageCount.textContent = `Page ${currentPage + 1} of ${max + 1}`;
   const chapters = book.chapters.length;
-  const frac =
-    (chapterIndex + (max > 0 ? currentPage / (max + 1) : 0)) / chapters;
-  els.progressFill.style.width = `${Math.min(100, frac * 100)}%`;
+  const bookFrac = (chapterIndex + currentFraction()) / chapters;
+  els.progressFill.style.width = `${Math.min(100, bookFrac * 100)}%`;
+  if (els.pageCount) els.pageCount.textContent = `${Math.round(bookFrac * 100)}%`;
 }
 
 function updateChapterLabel() {
@@ -242,7 +216,11 @@ function updateChapterLabel() {
 }
 
 function persistLocation() {
-  if (book) updateLocation(book.id, { chapter: chapterIndex, page: currentPage });
+  if (!book) return;
+  updateLocation(book.id, {
+    chapter: chapterIndex,
+    page: Math.round(currentFraction() * 1000),
+  });
 }
 
 // ---- Table of contents -----------------------------------------------------
@@ -263,72 +241,24 @@ function buildContentsMenu() {
   });
 }
 
-// ---- Highlighting (ported band logic) --------------------------------------
+// ---- Highlighting ----------------------------------------------------------
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-let highlightQueue = [];
-let highlightRunning = false;
-
-function updateHighlights() {
-  highlightPage(currentPage); // visible page ready immediately
-  queuePrefetch();
-}
-
-function highlightPage(p) {
-  if (p < 0 || p > getMaxPage()) return;
-  const words = Object.keys(getDict());
-  if (words.length === 0) return;
-  const done = pageHighlightState.get(p) || new Set();
-  const pending = words.filter((w) => !done.has(w));
-  if (pending.length === 0) return;
-
-  const bandStart = p * getPageWidth();
-  const bandEnd = bandStart + (getPageWidth() - GAP); // one column wide
-  highlightWordsInBand(pending, bandStart, bandEnd);
-
-  pending.forEach((w) => done.add(w));
-  pageHighlightState.set(p, done);
-}
-
-function queuePrefetch() {
-  const maxPage = getMaxPage();
-  const words = Object.keys(getDict());
-  if (words.length === 0) return;
-  const wanted = [currentPage + 1, currentPage - 1].filter(
-    (p) => p >= 0 && p <= maxPage,
-  );
-  highlightQueue = wanted.filter((p) => {
-    const done = pageHighlightState.get(p);
-    return words.some((w) => !(done && done.has(w)));
-  });
-  pumpQueue();
-}
-
-function pumpQueue() {
-  if (highlightRunning || highlightQueue.length === 0) return;
-  highlightRunning = true;
-  const run = () => {
-    highlightRunning = false;
-    const p = highlightQueue.shift();
-    if (p === undefined) return;
-    highlightPage(p);
-    pumpQueue();
-  };
-  if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 300 });
-  else setTimeout(run, 0);
-}
-
-// Wrap matches of `words` whose laid-out x-position falls inside the band.
-function highlightWordsInBand(words, bandStart, bandEnd) {
+// Wrap every dictionary word in the chapter. With a single scrolling column the
+// whole chapter is laid out at once, so there's no per-page banding — one pass
+// on render (and on dictionary change) is enough.
+function applyHighlights() {
   const dict = getDict();
+  const words = Object.keys(dict);
+  if (words.length === 0) return;
+
   // Whole-word match using Unicode-aware boundaries (JS \b is ASCII-only and
   // would break inside words like "Wänden"). Letters must not sit on either side.
   const alt = words.map(escapeRegex).join("|");
   const regex = new RegExp(`(?<![\\p{L}\\p{N}])(${alt})(?![\\p{L}\\p{N}])`, "giu");
-  const originLeft = els.bookText.getBoundingClientRect().left;
   const walker = document.createTreeWalker(els.bookText, NodeFilter.SHOW_TEXT);
 
   const ranges = [];
@@ -337,27 +267,18 @@ function highlightWordsInBand(words, bandStart, bandEnd) {
     if (node.parentElement.classList.contains("custom-highlight")) continue;
     if (!node.textContent.trim()) continue;
 
-    const probe = document.createRange();
-    probe.selectNodeContents(node);
-    const nodeRect = probe.getBoundingClientRect();
-    const nodeLeft = nodeRect.left - originLeft;
-    const nodeRight = nodeRect.right - originLeft;
-    if (nodeRight < bandStart) continue;
-    if (nodeLeft > bandEnd) break;
-
     regex.lastIndex = 0;
     let match;
     while ((match = regex.exec(node.textContent)) !== null) {
       const range = document.createRange();
       range.setStart(node, match.index);
       range.setEnd(node, match.index + match[0].length);
-      const matchLeft = range.getBoundingClientRect().left - originLeft;
-      if (matchLeft >= bandStart && matchLeft <= bandEnd) {
-        ranges.push([range, match[1]]);
-      }
+      ranges.push([range, match[1]]);
     }
   }
 
+  // Wrap in reverse document order so surrounding one match doesn't invalidate
+  // the offsets of earlier matches in the same text node.
   for (const [range, word] of ranges.reverse()) {
     const span = document.createElement("span");
     span.className = "custom-highlight";
