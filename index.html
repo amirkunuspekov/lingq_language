@@ -4,7 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Books — Reader</title>
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=2" />
+
+    <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
+         entry script's query (below) does NOT refresh the modules it imports —
+         Safari would keep serving them from cache. This import map rewrites every
+         local module to a versioned URL so one bump refreshes the whole app.
+         To ship a new version: bump every `?v=2` in this file (e.g. sed
+         's/?v=2/?v=2/g' index.html). Remote imports (esm.sh) are version-pinned. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "./js/main.js": "./js/main.js?v=2",
+          "./js/library.js": "./js/library.js?v=2",
+          "./js/reader.js": "./js/reader.js?v=2",
+          "./js/dictionary.js": "./js/dictionary.js?v=2",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=2",
+          "./js/folder.js": "./js/folder.js?v=2",
+          "./js/sync.js": "./js/sync.js?v=2",
+          "./js/auth.js": "./js/auth.js?v=2",
+          "./js/storage.js": "./js/storage.js?v=2",
+          "./js/booksync.js": "./js/booksync.js?v=2",
+          "./js/import.js": "./js/import.js?v=2",
+          "./js/epub.js": "./js/epub.js?v=2",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=2",
+          "./js/config.js": "./js/config.js?v=2"
+        }
+      }
+    </script>
+
     <!-- JSZip: used to unzip .epub files. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   </head>
@@ -146,6 +174,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=2"></script>
   </body>
 </html>
