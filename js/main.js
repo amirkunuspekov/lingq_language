@@ -98,6 +98,9 @@ initWordList(
     empty: $("wl-empty"),
     count: $("wl-count"),
     exportBtn: $("wl-export"),
+    addForm: $("wl-add-form"),
+    addWord: $("wl-add-word"),
+    addTrans: $("wl-add-trans"),
   },
   onDictChange,
 );

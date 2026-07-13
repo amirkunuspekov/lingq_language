@@ -433,6 +433,28 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+.wl-add-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.wl-add-input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font: inherit;
+  background: var(--panel);
+  color: var(--text);
+}
+.wl-add-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+.wl-add-btn {
+  flex: 0 0 auto;
+}
 .wl-search {
   width: 100%;
   padding: 12px 16px;
@@ -984,6 +1006,18 @@ body {
   }
   .main-scroll {
     padding: 20px;
+  }
+
+  /* Add-word form: wrap so the two inputs and button never squeeze on a narrow
+     screen — the word/translation inputs share the top row, button drops below. */
+  .wl-add-form {
+    flex-wrap: wrap;
+  }
+  .wl-add-input {
+    flex: 1 1 40%;
+  }
+  .wl-add-btn {
+    flex: 1 1 100%;
   }
 
   /* Reading Now hero: shrink the cover and let the info column shrink so the

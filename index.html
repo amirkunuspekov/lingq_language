@@ -4,31 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Books — Reader</title>
-    <link rel="stylesheet" href="css/styles.css?v=2" />
+    <link rel="stylesheet" href="css/styles.css?v=3" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
          Safari would keep serving them from cache. This import map rewrites every
          local module to a versioned URL so one bump refreshes the whole app.
-         To ship a new version: bump every `?v=2` in this file (e.g. sed
-         's/?v=2/?v=2/g' index.html). Remote imports (esm.sh) are version-pinned. -->
+         To ship a new version: bump every `?v=N` in this file to the next number,
+         e.g. replace v=3 with v=4 everywhere. Remote imports are version-pinned. -->
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=2",
-          "./js/library.js": "./js/library.js?v=2",
-          "./js/reader.js": "./js/reader.js?v=2",
-          "./js/dictionary.js": "./js/dictionary.js?v=2",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=2",
-          "./js/folder.js": "./js/folder.js?v=2",
-          "./js/sync.js": "./js/sync.js?v=2",
-          "./js/auth.js": "./js/auth.js?v=2",
-          "./js/storage.js": "./js/storage.js?v=2",
-          "./js/booksync.js": "./js/booksync.js?v=2",
-          "./js/import.js": "./js/import.js?v=2",
-          "./js/epub.js": "./js/epub.js?v=2",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=2",
-          "./js/config.js": "./js/config.js?v=2"
+          "./js/main.js": "./js/main.js?v=3",
+          "./js/library.js": "./js/library.js?v=3",
+          "./js/reader.js": "./js/reader.js?v=3",
+          "./js/dictionary.js": "./js/dictionary.js?v=3",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=3",
+          "./js/folder.js": "./js/folder.js?v=3",
+          "./js/sync.js": "./js/sync.js?v=3",
+          "./js/auth.js": "./js/auth.js?v=3",
+          "./js/storage.js": "./js/storage.js?v=3",
+          "./js/booksync.js": "./js/booksync.js?v=3",
+          "./js/import.js": "./js/import.js?v=3",
+          "./js/epub.js": "./js/epub.js?v=3",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=3",
+          "./js/config.js": "./js/config.js?v=3"
         }
       }
     </script>
@@ -100,11 +100,16 @@
             <button id="wl-export" class="ghost-btn">⇩ Export CSV</button>
           </div>
         </header>
+        <form id="wl-add-form" class="wl-add-form">
+          <input id="wl-add-word" class="wl-add-input" type="text" placeholder="Word" autocomplete="off" autocapitalize="none" />
+          <input id="wl-add-trans" class="wl-add-input" type="text" placeholder="Translation" autocomplete="off" />
+          <button id="wl-add-btn" type="submit" class="primary-btn wl-add-btn">Add</button>
+        </form>
         <input id="wl-search" class="wl-search" type="search" placeholder="Search words or translations…" />
         <div id="wl-empty" class="empty-state">
           <p class="empty-emoji">🗂️</p>
           <p>No translated words yet.</p>
-          <p class="empty-sub">Open a book, select a word, and right-click to add a translation.</p>
+          <p class="empty-sub">Add one above, or open a book and select a word to translate it.</p>
         </div>
         <table id="wl-table" class="wl-table hidden">
           <thead>
@@ -174,6 +179,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=2"></script>
+    <script type="module" src="js/main.js?v=3"></script>
   </body>
 </html>

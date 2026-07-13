@@ -11,6 +11,25 @@ export function initWordList(refs, dictChangeCallback) {
   onDictChange = dictChangeCallback;
   els.search.addEventListener("input", render);
   els.exportBtn.addEventListener("click", exportCsv);
+  els.addForm.addEventListener("submit", handleAdd);
+}
+
+// Add (or overwrite) a word/translation straight from the Word List view.
+function handleAdd(e) {
+  e.preventDefault();
+  const word = els.addWord.value.trim();
+  const translation = els.addTrans.value.trim();
+  if (!word || !translation) return;
+
+  setEntry(word, translation); // lowercases the key; overwrites if it exists
+
+  els.addWord.value = "";
+  els.addTrans.value = "";
+  els.search.value = ""; // clear any filter so the new word is visible
+  els.addWord.focus();
+
+  render();
+  onDictChange();
 }
 
 export function render() {
