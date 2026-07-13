@@ -964,6 +964,15 @@ body {
   outline: 2px solid var(--accent);
   border-color: transparent;
 }
+/* While a MyMemory lookup is in flight, gently pulse the "Looking up…" hint. */
+.translation-modal textarea.looking-up::placeholder {
+  color: var(--accent);
+  animation: lookup-pulse 1s ease-in-out infinite;
+}
+@keyframes lookup-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
 .modal-actions {
   display: flex;
   justify-content: flex-end;

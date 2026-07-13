@@ -7,10 +7,12 @@
 // reader never reveals the meaning by accident.
 
 import { setEntry, deleteEntry, hasEntry, getDict } from "./storage.js";
+import { lookupTranslation } from "./translate.js";
 
 let els = null;
 let onDictChange = () => {};
 let pendingWord = ""; // word awaiting a translation in the modal
+let lookupToken = 0; // guards against a stale auto-fill landing on a new word
 
 // Captured when the selection toolbar is shown, so a tap on the button still
 // works even after the tap collapses the selection (common on mobile).
@@ -246,10 +248,34 @@ function openModal(word) {
   hideSelToolbar();
   hideMenu();
   els.modalWord.textContent = word;
-  els.modalInput.value = getDict()[word.toLowerCase()] || "";
+  const existing = getDict()[word.toLowerCase()] || "";
+  els.modalInput.value = existing;
   els.modal.classList.remove("hidden");
   els.overlay.classList.remove("hidden");
   els.modalInput.focus();
+
+  // For a brand-new word, fetch a suggested translation and drop it into the
+  // (fully editable) field. Skip it when the word is already translated.
+  if (!existing) autoFillTranslation(word);
+}
+
+// Look up `word` and pre-fill the modal's translation field. The field stays
+// editable the whole time: if the lookup fails, or the user has already started
+// typing, or the modal has moved on to a different word, we leave it alone.
+async function autoFillTranslation(word) {
+  const token = ++lookupToken;
+  const input = els.modalInput;
+  input.classList.add("looking-up");
+  input.placeholder = "Looking up…";
+
+  const translation = await lookupTranslation(word);
+
+  input.classList.remove("looking-up");
+  input.placeholder = "Type the translation…";
+  if (token !== lookupToken) return; // a newer lookup superseded this one
+  if (pendingWord !== word) return; // modal closed or opened another word
+  if (input.value.trim()) return; // user already typed something
+  if (translation) input.value = translation;
 }
 
 function closeModal() {
