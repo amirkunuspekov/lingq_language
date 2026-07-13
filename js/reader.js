@@ -150,7 +150,13 @@ function renderChapter(page = 0) {
   const padY = parseFloat(vpStyle.paddingTop) + parseFloat(vpStyle.paddingBottom);
   const padX = parseFloat(vpStyle.paddingLeft) + parseFloat(vpStyle.paddingRight);
   const innerH = els.viewport.clientHeight - padY;
-  els.bookText.style.columnWidth = els.viewport.clientWidth - padX + "px";
+  const colW = els.viewport.clientWidth - padX;
+  // Pin an explicit width equal to one column. Pages are shifted with a negative
+  // margin-left (see renderPage), and on an auto-width block a negative margin
+  // would instead widen the box and re-flow the columns — an explicit width keeps
+  // the column layout fixed so only the position moves.
+  els.bookText.style.width = colW + "px";
+  els.bookText.style.columnWidth = colW + "px";
   els.bookText.style.columnGap = GAP + "px";
   els.bookText.style.height = innerH + "px";
   els.bookText.style.columnFill = "auto";
@@ -183,40 +189,17 @@ function getMaxPage() {
 }
 
 function renderPage(animate = false) {
-  // Reveal the page by scrolling the viewport, NOT by moving the text element.
-  // Two earlier approaches failed on iOS Safari: a CSS transform breaks the
-  // native text-selection UI on the shifted content, and a negative margin
-  // re-flowed the columns so pages overlapped and only part was selectable.
-  // Scrolling leaves the columns at their true positions, so selection works on
-  // every page and nothing overlaps.
-  setScroll(currentPage * getPageWidth(), animate);
+  // Move pages with a negative margin (normal layout) rather than a CSS
+  // transform. iOS Safari fails to render the native text-selection UI (the blue
+  // highlight + drag handles) on transform-shifted content, so selection worked
+  // only on the first page (at offset 0) and intermittently elsewhere. A margin
+  // shift keeps the text at a real layout position, so selection works on every
+  // page. Only enable the CSS transition for genuine flips; chapter
+  // renders/resizes pass animate=false so the page snaps into place.
+  els.bookText.classList.toggle("slide", animate);
+  els.bookText.style.marginLeft = `-${currentPage * getPageWidth()}px`;
   updateProgress();
   persistLocation();
-}
-
-// Move the viewport to `left`. Real flips animate with a short JS tween (works
-// even though the viewport is overflow:hidden, where CSS smooth scroll may not);
-// chapter renders/resizes jump instantly.
-let scrollAnim = null;
-function setScroll(left, animate) {
-  if (scrollAnim) cancelAnimationFrame(scrollAnim), (scrollAnim = null);
-  const vp = els.viewport;
-  const start = vp.scrollLeft;
-  const dist = left - start;
-  if (!animate || dist === 0) {
-    vp.scrollLeft = left;
-    return;
-  }
-  const DURATION = 280;
-  const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
-  let startTs = null;
-  const step = (ts) => {
-    if (startTs === null) startTs = ts;
-    const p = Math.min(1, (ts - startTs) / DURATION);
-    vp.scrollLeft = start + dist * ease(p);
-    scrollAnim = p < 1 ? requestAnimationFrame(step) : null;
-  };
-  scrollAnim = requestAnimationFrame(step);
 }
 
 // Flip within the chapter, spilling into adjacent chapters at the boundaries.
