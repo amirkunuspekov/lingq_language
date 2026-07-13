@@ -150,7 +150,13 @@ function renderChapter(page = 0) {
   const padY = parseFloat(vpStyle.paddingTop) + parseFloat(vpStyle.paddingBottom);
   const padX = parseFloat(vpStyle.paddingLeft) + parseFloat(vpStyle.paddingRight);
   const innerH = els.viewport.clientHeight - padY;
-  els.bookText.style.columnWidth = els.viewport.clientWidth - padX + "px";
+  const colW = els.viewport.clientWidth - padX;
+  // Pin an explicit width equal to one column. Pages are shifted with a negative
+  // margin-left (see renderPage), and on an auto-width block a negative margin
+  // would instead widen the box and re-flow the columns — an explicit width keeps
+  // the column layout fixed so only the position moves.
+  els.bookText.style.width = colW + "px";
+  els.bookText.style.columnWidth = colW + "px";
   els.bookText.style.columnGap = GAP + "px";
   els.bookText.style.height = innerH + "px";
   els.bookText.style.columnFill = "auto";
@@ -183,10 +189,15 @@ function getMaxPage() {
 }
 
 function renderPage(animate = false) {
-  // Only enable the CSS transition for genuine flips; chapter renders/resizes
-  // pass animate=false so the page snaps into place instead of sliding.
+  // Move pages with a negative margin (normal layout) rather than a CSS
+  // transform. iOS Safari fails to render the native text-selection UI (the blue
+  // highlight + drag handles) on transform-shifted content, so selection worked
+  // only on the first page (at offset 0) and intermittently elsewhere. A margin
+  // shift keeps the text at a real layout position, so selection works on every
+  // page. Only enable the CSS transition for genuine flips; chapter
+  // renders/resizes pass animate=false so the page snaps into place.
   els.bookText.classList.toggle("slide", animate);
-  els.bookText.style.transform = `translateX(-${currentPage * getPageWidth()}px)`;
+  els.bookText.style.marginLeft = `-${currentPage * getPageWidth()}px`;
   updateProgress();
   persistLocation();
 }
