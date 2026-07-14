@@ -211,9 +211,23 @@ function paginateChapter(targetBlock = 0) {
       continue; // fits fully — keep filling
     }
 
-    // Overflowed. Pull the block back out and split it to fill the *remaining*
-    // space on this page; the rest continues on the next page.
+    // Overflowed. Pull the block back out.
     pageEl.removeChild(node);
+
+    // Headings/titles are kept whole — never split across a page break.
+    if (isUnsplittable(node)) {
+      if (pageEl.childNodes.length > 0) {
+        nextPage();
+        queue.unshift({ node, block }); // retry the whole heading on a fresh page
+      } else {
+        pageEl.appendChild(node); // taller than a page (rare) — place it clipped
+        if (pageFirst < 0) pageFirst = block;
+        nextPage();
+      }
+      continue;
+    }
+
+    // Otherwise split it to fill the *remaining* space; the rest continues next page.
     const { placed, tail } = splitBlock(node, pageEl);
 
     if (placed) {
@@ -243,6 +257,19 @@ function paginateChapter(targetBlock = 0) {
   const idx = pages.findIndex((p) => p.firstBlock >= targetBlock);
   currentPage = idx === -1 ? pages.length - 1 : idx;
   showPage(false);
+}
+
+// Headings and title-like blocks (a big font-size the EPUB gave them) are moved
+// whole rather than split across a page break.
+function isUnsplittable(node) {
+  if (/^H[1-6]$/.test(node.tagName)) return true;
+  const fs = node.style && node.style.fontSize;
+  if (fs && fs.endsWith("em") && parseFloat(fs) >= 1.3) {
+    // A big font-size marks a title only when the text is short; a long block in
+    // large print is still real body text and may be split across pages.
+    return (node.textContent || "").trim().length < 200;
+  }
+  return false;
 }
 
 // Split `block` so its head fills the space left on `pageEl` (after whatever is

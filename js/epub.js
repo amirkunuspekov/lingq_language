@@ -26,8 +26,38 @@ function parseXml(text) {
 const KEEP_INLINE = { B: "strong", STRONG: "strong", I: "em", EM: "em", U: "u", SUP: "sup", SUB: "sub", SMALL: "small" };
 const KEEP_HEADING = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
 const KEEP_BLOCK = new Set(["P", "BLOCKQUOTE", "UL", "OL", "LI"]);
-const CONTAINER = new Set(["DIV", "SECTION", "ARTICLE", "MAIN", "BODY", "SPAN", "A", "FONT"]);
+const BLOCK_CONTAINER = new Set(["DIV", "SECTION", "ARTICLE", "MAIN", "BODY"]);
+const INLINE_CONTAINER = new Set(["SPAN", "A", "FONT"]);
 const DROP = new Set(["SCRIPT", "STYLE", "HEAD", "TITLE", "SVG", "IMG", "IMAGE", "FIGURE", "FIGCAPTION", "NAV", "LINK", "META", "AUDIO", "VIDEO", "IFRAME", "TABLE"]);
+
+// Read the *appearance* an element resolves to under the EPUB's own CSS and turn
+// it into a small, safe inline-style string. Only visual properties that can't
+// disrupt our pagination are kept (no margins/floats/positioning). Colors are
+// deliberately skipped so the reader's light/sepia/dark themes stay readable.
+// `baseFont` is the chapter's base font-size in px, so sizes become relative ems
+// that scale with the reader's own font size.
+function safeStyle(el, baseFont) {
+  let cs;
+  try { cs = getComputedStyle(el); } catch { return ""; }
+  const parts = [];
+  const fw = cs.fontWeight;
+  if (fw === "bold" || parseInt(fw, 10) >= 600) parts.push("font-weight:700");
+  if (cs.fontStyle === "italic" || cs.fontStyle === "oblique") parts.push("font-style:italic");
+  if (cs.textAlign === "center") parts.push("text-align:center");
+  else if (cs.textAlign === "right" || cs.textAlign === "end") parts.push("text-align:right");
+  const fs = parseFloat(cs.fontSize);
+  if (fs && baseFont) {
+    const r = fs / baseFont;
+    if (r >= 1.15 || r <= 0.85) parts.push(`font-size:${r.toFixed(2)}em`);
+  }
+  if (cs.textTransform === "uppercase" || cs.textTransform === "capitalize") {
+    parts.push(`text-transform:${cs.textTransform}`);
+  }
+  if (cs.fontVariant === "small-caps" || cs.fontVariantCaps === "small-caps") {
+    parts.push("font-variant:small-caps");
+  }
+  return parts.join(";");
+}
 
 function escapeHtml(s) {
   return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
@@ -38,7 +68,7 @@ function hasBlock(html) {
   return /<(p|h[1-6]|blockquote|ul|ol|li|hr)\b/i.test(html);
 }
 
-function cleanNode(node) {
+function cleanNode(node, baseFont) {
   let html = "";
   for (const child of node.childNodes) {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -51,21 +81,25 @@ function cleanNode(node) {
     if (tag === "BR") { html += "<br>"; continue; }
     if (tag === "HR") { html += "<hr>"; continue; }
 
-    const inner = cleanNode(child);
+    const inner = cleanNode(child, baseFont);
+    const style = safeStyle(child, baseFont);
+    const attr = style ? ` style="${style}"` : "";
 
     if (KEEP_INLINE[tag]) {
       if (inner.trim()) {
         const t = KEEP_INLINE[tag];
         html += `<${t}>${inner}</${t}>`;
       }
-    } else if (KEEP_HEADING.has(tag)) {
-      if (inner.trim()) html += `<${tag.toLowerCase()}>${inner}</${tag.toLowerCase()}>`;
-    } else if (KEEP_BLOCK.has(tag)) {
-      if (inner.trim()) html += `<${tag.toLowerCase()}>${inner}</${tag.toLowerCase()}>`;
-    } else if (CONTAINER.has(tag)) {
-      // Unwrap containers. If a container holds raw text (no block children),
-      // wrap that text in a paragraph so paragraph spacing survives.
-      html += hasBlock(inner) ? inner : inner.trim() ? `<p>${inner}</p>` : "";
+    } else if (KEEP_HEADING.has(tag) || KEEP_BLOCK.has(tag)) {
+      if (inner.trim()) html += `<${tag.toLowerCase()}${attr}>${inner}</${tag.toLowerCase()}>`;
+    } else if (INLINE_CONTAINER.has(tag)) {
+      // Keep inline; wrap in a styled span only when it carries emphasis.
+      if (inner.trim()) html += style ? `<span${attr}>${inner}</span>` : inner;
+    } else if (BLOCK_CONTAINER.has(tag)) {
+      // Unwrap block containers. If one holds raw text (no block children), wrap
+      // that text in a paragraph so paragraph spacing (and its style) survives.
+      if (hasBlock(inner)) html += inner;
+      else if (inner.trim()) html += `<p${attr}>${inner}</p>`;
     } else {
       html += inner; // unknown tag: keep its text content
     }
@@ -73,10 +107,55 @@ function cleanNode(node) {
   return html;
 }
 
-function extractHtml(doc) {
+// Fetch the stylesheets a spine document references (linked .css files + inline
+// <style> blocks), so we can resolve its class-based styling.
+async function collectCss(zip, doc, docPath) {
+  let css = "";
+  for (const link of doc.querySelectorAll('link[rel~="stylesheet"], link[type="text/css"]')) {
+    const href = link.getAttribute("href");
+    if (!href) continue;
+    const f = zip.file(resolvePath(docPath, href));
+    if (f) { try { css += (await f.async("string")) + "\n"; } catch { /* ignore */ } }
+  }
+  doc.querySelectorAll("style").forEach((s) => { css += s.textContent + "\n"; });
+  return css;
+}
+
+// Sanitize a spine document into our whitelist, but first render it with the
+// EPUB's own CSS inside a Shadow DOM so getComputedStyle resolves class-based
+// styling into inline emphasis (bold/italic/size/alignment). The shadow keeps
+// that CSS from leaking into the app, and resource tags are stripped so nothing
+// loads. Falls back to plain sanitization if anything goes wrong.
+function extractHtml(doc, css) {
   const body = doc.body || doc.querySelector("body");
   if (!body) return "";
-  return cleanNode(body).replace(/(<br>\s*){3,}/g, "<br><br>").trim();
+  body
+    .querySelectorAll("script,iframe,object,embed,img,image,svg,audio,video,link,meta,title,noscript,style")
+    .forEach((el) => el.remove());
+
+  let host = null;
+  try {
+    host = document.createElement("div");
+    host.setAttribute("style", "position:absolute;left:-99999px;top:0;width:760px;visibility:hidden;");
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: "open" });
+    // Neutralize anything that could fetch (external @imports, url() fonts/images).
+    const safeCss = (css || "").replace(/@import[^;]+;/gi, "").replace(/url\([^)]*\)/gi, "none");
+    const styleEl = document.createElement("style");
+    styleEl.textContent = safeCss;
+    shadow.appendChild(styleEl);
+    const mount = document.createElement("div");
+    mount.innerHTML = body.innerHTML;
+    shadow.appendChild(mount);
+
+    const baseFont = parseFloat(getComputedStyle(mount).fontSize) || 16;
+    const out = cleanNode(mount, baseFont);
+    return out.replace(/(<br>\s*){3,}/g, "<br><br>").trim();
+  } catch {
+    return cleanNode(body, 16).replace(/(<br>\s*){3,}/g, "<br><br>").trim();
+  } finally {
+    if (host) host.remove();
+  }
 }
 
 export async function parseEpub(file) {
@@ -131,7 +210,8 @@ export async function parseEpub(file) {
     const zf = zip.file(item.href);
     if (!zf) continue;
     const doc = new DOMParser().parseFromString(await zf.async("string"), "text/html");
-    const html = extractHtml(doc);
+    const css = await collectCss(zip, doc, item.href);
+    const html = extractHtml(doc, css);
     if (!html || !doc.body?.textContent?.trim()) continue;
     // Chapter title: first heading if present, else a running number.
     const heading = doc.querySelector("h1, h2, h3")?.textContent?.trim();

@@ -653,18 +653,9 @@ body {
 }
 
 /* ---- Preserved EPUB/text formatting ---- */
+/* Paragraphs are separated by spacing only — no first-line indent. */
 .book-text p {
   margin: 0 0 0.9em;
-  text-indent: 1.4em;
-}
-/* First paragraph and paragraphs after a heading: no indent (book convention). */
-.book-text p:first-child,
-.book-text h1 + p,
-.book-text h2 + p,
-.book-text h3 + p,
-.book-text h4 + p,
-.book-text blockquote + p {
-  text-indent: 0;
 }
 
 /* Chapter titles (h1/h2) and section titles (h3+) look clearly different. */
