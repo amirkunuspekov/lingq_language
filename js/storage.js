@@ -88,9 +88,10 @@ export async function applyRemoteProgress(id, location) {
   await putBook(book);
 }
 
-// Simple unique id without relying on Date.now-only collisions.
+// Unique id = wall-clock time marker + randomness, so IDs never repeat even when
+// the same book is imported twice.
 export function makeId() {
-  return "b_" + Math.random().toString(36).slice(2, 10) + "_" + performance.now().toFixed(0);
+  return "b_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
 }
 
 // ---- Dictionary (per-user word -> translation) -----------------------------

@@ -4,7 +4,7 @@
 // later loads are instant and offline-capable.
 
 import { getClient } from "./supabaseClient.js";
-import { getBook, putBook, deleteBook as deleteLocalBook } from "./storage.js";
+import { getBook, putBook, getAllBooks, deleteBook as deleteLocalBook } from "./storage.js";
 
 const TABLE = "books";
 const COLUMNS = "id, title, author, format, cover, chapters";
@@ -41,7 +41,11 @@ export async function uploadBook(book) {
   if (error) console.error("Book upload failed:", error);
 }
 
-// Pull the user's cloud books into IndexedDB (skips any already cached).
+// Two-way pull: add cloud books that aren't cached yet, and reconcile deletions
+// by removing cloud-sourced books that have disappeared from the cloud (e.g.
+// deleted on another device while this one was offline). Only cloud-sourced
+// copies are touched — bundled `folder:` books and not-yet-uploaded local
+// imports are left alone.
 export async function pullBooks(ownerId, onChange) {
   const sb = await getClient();
   if (!sb) return;
@@ -50,13 +54,25 @@ export async function pullBooks(ownerId, onChange) {
     console.error("Book pull failed:", error);
     return;
   }
-  let added = 0;
+
+  const remoteIds = new Set(data.map((r) => r.id));
+  let changed = false;
+
   for (const row of data) {
     if (await getBook(row.id)) continue; // already cached
     await putBook(rowToBook(row, ownerId));
-    added++;
+    changed = true;
   }
-  if (added > 0) onChange();
+
+  // Remove local cloud copies that no longer exist remotely.
+  for (const book of await getAllBooks()) {
+    if (book.source === "cloud" && !remoteIds.has(book.id)) {
+      await deleteLocalBook(book.id);
+      changed = true;
+    }
+  }
+
+  if (changed) onChange();
 }
 
 // Remove a book from the cloud (its local copy is deleted by the caller).
