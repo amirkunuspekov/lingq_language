@@ -34,9 +34,22 @@ function escapeHtml(s) {
   return s.replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
 }
 
+// Plain text carries no formatting, so guess section headings: a short, single
+// line, standalone between blank lines, that doesn't read like a sentence or a
+// line of dialogue. Conservative on purpose — better to miss a heading than to
+// bold a real sentence.
+function looksLikeHeading(s) {
+  if (s.includes("\n")) return false; // multi-line block → body text
+  if (s.length > 60) return false; // too long for a heading
+  if (s.split(/\s+/).length > 9) return false; // too many words
+  if (/^[„“"«»\-—•]/.test(s)) return false; // dialogue / list marker
+  if (/[.…,;"“”»)]$/.test(s)) return false; // ends like prose (allows ? ! : and letters)
+  return true;
+}
+
 // Plain text -> HTML: blank lines separate paragraphs; single newlines become
-// line breaks. The chapter's own heading line is promoted to an <h2> so txt
-// chapter titles render distinctly, matching EPUB heading styling.
+// line breaks. The chapter's own title becomes an <h2>; other short standalone
+// lines are promoted to <h3> section headings so the text isn't a flat wall.
 function textToHtml(text, title) {
   const blocks = text.split(/\n\s*\n/);
   const out = [];
@@ -47,6 +60,8 @@ function textToHtml(text, title) {
       const rest = trimmed.slice(title.trim().length).trim();
       out.push(`<h2>${escapeHtml(title.trim())}</h2>`);
       if (rest) out.push(`<p>${escapeHtml(rest).replace(/\n/g, "<br>")}</p>`);
+    } else if (looksLikeHeading(trimmed)) {
+      out.push(`<h3>${escapeHtml(trimmed)}</h3>`);
     } else {
       out.push(`<p>${escapeHtml(trimmed).replace(/\n/g, "<br>")}</p>`);
     }

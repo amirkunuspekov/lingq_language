@@ -1,15 +1,26 @@
-// reader.js — the reading view. One chapter is rendered at a time as a single
-// normal-flow column and read by vertical scrolling; left/right (swipe or the
-// arrow controls) move between chapters. Vertical scrolling is used instead of
-// CSS multi-column pagination because iOS Safari cannot select text in the
-// continuation fragment of a paragraph split across columns — with a single
-// scrolling column every word is selectable.
+// reader.js — the reading view. Each chapter is paginated in JavaScript into
+// discrete, page-sized boxes laid out in a horizontal row; flipping shifts the
+// row with translateX. Unlike CSS multi-column pagination, every page is real
+// normal-flow content (a paragraph that spans a page break is split into two
+// separate <p> elements), so iOS Safari can select any word — the continuation
+// of a paragraph is a genuine element, not an un-hittable column fragment.
 
 import { getBook, getDict, updateLocation } from "./storage.js";
+
+// Gutter between page boxes. Must exceed the viewport's side padding, or a
+// neighboring page peeks through the current page's left/right margin.
+const GAP = 48;
 
 let els = null; // cached DOM references, filled on init
 let book = null; // active book object
 let chapterIndex = 0;
+
+// Pagination state for the current chapter.
+let pages = []; // [{ firstBlock }] — index of the first source block on each page
+let currentPage = 0;
+let pageW = 0; // page content width (px)
+let pageH = 0; // page content height (px)
+let roLastW = -1, roLastH = -1; // last viewport size the chapter was paginated at
 
 let onExit = () => {}; // callback to return to library
 
@@ -17,44 +28,31 @@ export function initReader(refs, exitCallback) {
   els = refs;
   onExit = exitCallback;
 
-  // The arrow controls now move between chapters (there are no in-chapter pages).
-  els.flipForward.addEventListener("click", () => changeChapter(+1));
-  els.flipBackward.addEventListener("click", () => changeChapter(-1));
+  els.flipForward.addEventListener("click", () => flip(+1));
+  els.flipBackward.addEventListener("click", () => flip(-1));
   els.back.addEventListener("click", () => onExit());
 
   document.addEventListener("keydown", (e) => {
     if (els.view.classList.contains("hidden")) return;
-    // Left/Right change chapters; Up/Down/space fall through to native scroll.
-    if (e.key === "ArrowRight") changeChapter(+1);
-    else if (e.key === "ArrowLeft") changeChapter(-1);
+    if (e.key === "ArrowRight") flip(+1);
+    else if (e.key === "ArrowLeft") flip(-1);
     else if (e.key === "Escape") onExit();
   });
 
-  // Track scroll: update the progress bar live and persist the position (throttled).
-  let scrollRaf = null;
-  let persistTimer = null;
-  els.viewport.addEventListener(
-    "scroll",
-    () => {
-      if (!book || els.view.classList.contains("hidden")) return;
-      if (!scrollRaf) {
-        scrollRaf = requestAnimationFrame(() => {
-          scrollRaf = null;
-          updateProgress();
-        });
-      }
-      clearTimeout(persistTimer);
-      persistTimer = setTimeout(persistLocation, 400);
-    },
-    { passive: true },
-  );
-
+  // Re-paginate whenever the viewport actually changes size (window resize,
+  // rotate, sidebar toggles). A ResizeObserver on the viewport is more reliable
+  // than the window "resize" event and reads the real box, so widening after
+  // narrowing correctly reflows the text back out.
   let resizeTimer = null;
-  window.addEventListener("resize", () => {
-    if (els.view.classList.contains("hidden")) return;
+  const ro = new ResizeObserver(() => {
+    if (!book || els.view.classList.contains("hidden")) return;
+    const w = els.viewport.clientWidth, h = els.viewport.clientHeight;
+    if (w === roLastW && h === roLastH) return; // no real change
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => renderChapter(currentFraction()), 150);
+    const anchor = pages[currentPage]?.firstBlock ?? 0;
+    resizeTimer = setTimeout(() => paginateChapter(anchor), 150);
   });
+  ro.observe(els.viewport);
 
   initSwipe();
   initChrome();
@@ -82,22 +80,19 @@ function toggleChrome() {
 }
 
 function initChrome() {
-  // Generic tap on the reading area toggles the header.
   els.viewport.addEventListener("click", (e) => {
     if (e.target.closest(".custom-highlight")) return; // highlight menu handles it
-    if (e.target.closest(".page-button")) return; // chapter arrows
+    if (e.target.closest(".page-button")) return; // flip arrows
     const sel = window.getSelection();
     if (sel && !sel.isCollapsed) return; // mid text-selection
     toggleChrome();
   });
-  // Interacting with the header keeps it alive (resets the 5s timer).
   els.view.querySelector(".reader-bar")?.addEventListener("click", () => {
     if (els.view.classList.contains("chrome-visible")) showChrome();
   });
 }
 
-// Horizontal swipe changes chapters (vertical drags scroll natively and are
-// ignored here). This is the primary chapter gesture on touch devices.
+// Horizontal swipe flips pages (primary flip gesture on touch devices).
 function initSwipe() {
   let startX = 0, startY = 0, active = false;
   els.viewport.addEventListener(
@@ -120,10 +115,9 @@ function initSwipe() {
       const dy = t.clientY - startY;
       // Require a clearly horizontal swipe; ignore taps and vertical scrolls.
       if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      // Don't change chapters while the user is selecting text.
       const sel = window.getSelection();
-      if (sel && !sel.isCollapsed) return;
-      changeChapter(dx < 0 ? +1 : -1);
+      if (sel && !sel.isCollapsed) return; // don't flip mid-selection
+      flip(dx < 0 ? +1 : -1);
     },
     { passive: true },
   );
@@ -139,16 +133,16 @@ export async function openBook(id) {
   book = await getBook(id);
   if (!book) return;
   chapterIndex = book.lastLocation?.chapter || 0;
-  // Position within a chapter is stored as a scroll fraction in permille (0–1000)
-  // so it maps across devices/orientations regardless of layout height.
-  const startFraction = (book.lastLocation?.page || 0) / 1000;
+  // Position within a chapter is stored as the index of the first source block
+  // (paragraph) shown — device-independent, unlike a raw page number.
+  const startBlock = book.lastLocation?.page || 0;
   els.title.textContent = book.title;
   buildContentsMenu();
   // The view must already be visible so the viewport has real dimensions to
   // measure — the caller (main.js) reveals the reader before calling openBook.
   els.view.classList.remove("hidden");
   hideChrome(); // start with chrome hidden (Apple Books style, mobile)
-  renderChapter(startFraction);
+  paginateChapter(startBlock);
 }
 
 function currentChapterHtml() {
@@ -160,52 +154,199 @@ function currentChapterHtml() {
   return "<p>" + esc.replace(/\n\s*\n/g, "</p><p>").replace(/\n/g, "<br>") + "</p>";
 }
 
-// (Re)render the current chapter and scroll to `fraction` (0–1 of the scrollable
-// height). Re-applies highlights so removed translations disappear and current
-// ones show.
-function renderChapter(fraction = 0) {
-  els.bookText.innerHTML = currentChapterHtml();
-  applyHighlights();
+// ---- Pagination ------------------------------------------------------------
+
+function newPageEl() {
+  const p = document.createElement("div");
+  p.className = "reader-page";
+  p.style.width = pageW + "px";
+  p.style.height = pageH + "px";
+  return p;
+}
+
+// Split the current chapter into page boxes and land on the page containing
+// `targetBlock` (a source-block index; a large value lands on the last page).
+// Runs synchronously, so the browser never paints the intermediate states.
+function paginateChapter(targetBlock = 0) {
+  const row = els.bookText;
+  row.classList.remove("slide");
+  // Clear any inline styles left by earlier layout schemes so the flex row is clean.
+  row.style.cssText = "";
+  row.style.transform = "translateX(0)";
+  row.style.columnGap = GAP + "px"; // gutter between page boxes
+  row.innerHTML = "";
+
+  const vpStyle = getComputedStyle(els.viewport);
+  const padX = parseFloat(vpStyle.paddingLeft) + parseFloat(vpStyle.paddingRight);
+  const padY = parseFloat(vpStyle.paddingTop) + parseFloat(vpStyle.paddingBottom);
+  pageW = els.viewport.clientWidth - padX;
+  pageH = els.viewport.clientHeight - padY;
+  roLastW = els.viewport.clientWidth;
+  roLastH = els.viewport.clientHeight;
+
+  // Parse the chapter into its top-level block elements.
+  const source = document.createElement("div");
+  source.innerHTML = currentChapterHtml();
+  const queue = Array.from(source.children).map((node, i) => ({ node, block: i }));
+
+  pages = [];
+  let pageEl = newPageEl();
+  let pageFirst = -1; // source-block index of the first content on this page
+  row.appendChild(pageEl);
+
+  const pushPage = () => pages.push({ firstBlock: pageFirst < 0 ? 0 : pageFirst });
+  const nextPage = () => {
+    pushPage();
+    pageEl = newPageEl();
+    row.appendChild(pageEl);
+    pageFirst = -1;
+  };
+
+  while (queue.length) {
+    const { node, block } = queue.shift();
+    pageEl.appendChild(node);
+
+    if (pageEl.scrollHeight <= pageH + 1) {
+      if (pageFirst < 0) pageFirst = block; // first content on this page
+      continue; // fits fully — keep filling
+    }
+
+    // Overflowed. Pull the block back out and split it to fill the *remaining*
+    // space on this page; the rest continues on the next page.
+    pageEl.removeChild(node);
+    const { placed, tail } = splitBlock(node, pageEl);
+
+    if (placed) {
+      if (pageFirst < 0) pageFirst = block; // head is the first content
+      nextPage();
+      if (tail) queue.unshift({ node: tail, block }); // continuation, same block
+    } else if (pageEl.childNodes.length > 0) {
+      // No line fit in the leftover space — finish this page, retry on a fresh one.
+      nextPage();
+      queue.unshift({ node, block });
+    } else {
+      // Empty page and not even one line fits (pathological) — place it clipped.
+      pageEl.appendChild(node);
+      if (pageFirst < 0) pageFirst = block;
+      nextPage();
+    }
+  }
+  // Push the final page unless nextPage() just left an empty trailing one.
+  if (pageEl.childNodes.length > 0 || pages.length === 0) pushPage();
+
+  applyHighlights(); // wrap dictionary words across every page (box-shadow: no reflow)
   updateChapterLabel();
 
-  // Restore the scroll position after layout. iOS occasionally needs a second
-  // tick once layout has settled, so re-apply on the next frame.
-  const apply = () => {
-    const scrollable = els.viewport.scrollHeight - els.viewport.clientHeight;
-    els.viewport.scrollTop = Math.max(0, fraction * scrollable);
-    updateProgress();
+  // Land on the first page that starts at/after targetBlock (targetBlock is a
+  // stored firstBlock value, so this hits its page exactly). A huge value — used
+  // by "previous chapter" — matches nothing and falls through to the last page.
+  const idx = pages.findIndex((p) => p.firstBlock >= targetBlock);
+  currentPage = idx === -1 ? pages.length - 1 : idx;
+  showPage(false);
+}
+
+// Split `block` so its head fills the space left on `pageEl` (after whatever is
+// already there) and the remainder is returned to continue on the next page.
+// Preserves inline formatting via Range.cloneContents. Returns
+// { placed, tail }: placed=false means not even one line fit in the leftover
+// space (the block is removed again so the caller can retry it on a fresh page).
+function splitBlock(block, pageEl) {
+  pageEl.appendChild(block);
+  const limit = pageEl.getBoundingClientRect().top + pageH;
+
+  const texts = [];
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) texts.push(n);
+  const totalLen = texts.reduce((s, t) => s + t.length, 0);
+  if (totalLen === 0) { pageEl.removeChild(block); return { placed: false, tail: null }; }
+
+  const charToPoint = (idx) => {
+    let i = idx, k = 0;
+    while (k < texts.length && i > texts[k].length) { i -= texts[k].length; k++; }
+    if (k >= texts.length) { k = texts.length - 1; i = texts[k].length; }
+    return [texts[k], i];
   };
-  apply();
-  requestAnimationFrame(apply);
+
+  const probe = document.createRange();
+  const fits = (idx) => {
+    const [node, off] = charToPoint(idx);
+    probe.setStart(block, 0);
+    probe.setEnd(node, off);
+    const rects = probe.getClientRects();
+    return rects.length === 0 || rects[rects.length - 1].bottom <= limit;
+  };
+
+  // Largest prefix (in characters) that still fits vertically.
+  let lo = 1, hi = totalLen, best = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (fits(mid)) { best = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  if (best <= 0) { pageEl.removeChild(block); return { placed: false, tail: null }; }
+
+  // Snap the cut back to a word boundary so no word is broken across pages.
+  const full = texts.map((t) => t.data).join("");
+  let cut = best;
+  while (cut > 0 && !/\s/.test(full[cut - 1])) cut--;
+  if (cut <= 0) cut = best; // single word longer than a page — hard cut
+
+  const [cutNode, cutOff] = charToPoint(cut);
+
+  const headRange = document.createRange();
+  headRange.setStart(block, 0);
+  headRange.setEnd(cutNode, cutOff);
+  const head = block.cloneNode(false);
+  head.appendChild(headRange.cloneContents());
+
+  const tailRange = document.createRange();
+  tailRange.setStart(cutNode, cutOff);
+  tailRange.setEnd(block, block.childNodes.length);
+  const tail = block.cloneNode(false);
+  tail.classList.add("cont"); // continuation → no first-line indent
+  tail.appendChild(tailRange.cloneContents());
+
+  pageEl.removeChild(block);
+  pageEl.appendChild(head);
+  return { placed: true, tail: tail.textContent.trim() ? tail : null };
+}
+
+// ---- Flip / navigation -----------------------------------------------------
+
+function showPage(animate) {
+  els.bookText.classList.toggle("slide", animate);
+  els.bookText.style.transform = `translateX(${-currentPage * (pageW + GAP)}px)`;
+  updateProgress();
   persistLocation();
 }
 
-// Re-apply highlights after the dictionary changes (add/remove a word).
-export function refreshHighlights() {
-  if (!isOpen()) return;
-  renderChapter(currentFraction());
-}
-
-// Current vertical scroll position as a 0–1 fraction of the scrollable height.
-function currentFraction() {
-  const scrollable = els.viewport.scrollHeight - els.viewport.clientHeight;
-  return scrollable > 0 ? els.viewport.scrollTop / scrollable : 0;
-}
-
-// ---- Chapter navigation ----------------------------------------------------
-
-function changeChapter(dir) {
-  const target = chapterIndex + dir;
-  if (target < 0 || target >= book.chapters.length) return;
-  chapterIndex = target;
-  renderChapter(0);
+// Flip within the chapter, spilling into adjacent chapters at the boundaries.
+function flip(dir) {
+  if (dir > 0) {
+    if (currentPage < pages.length - 1) {
+      currentPage++;
+      showPage(true);
+    } else if (chapterIndex < book.chapters.length - 1) {
+      chapterIndex++;
+      paginateChapter(0);
+    }
+  } else {
+    if (currentPage > 0) {
+      currentPage--;
+      showPage(true);
+    } else if (chapterIndex > 0) {
+      chapterIndex--;
+      paginateChapter(Number.MAX_SAFE_INTEGER); // land on the last page
+    }
+  }
 }
 
 function updateProgress() {
+  const total = pages.length;
+  els.pageCount.textContent = `Page ${currentPage + 1} of ${total}`;
   const chapters = book.chapters.length;
-  const bookFrac = (chapterIndex + currentFraction()) / chapters;
-  els.progressFill.style.width = `${Math.min(100, bookFrac * 100)}%`;
-  if (els.pageCount) els.pageCount.textContent = `${Math.round(bookFrac * 100)}%`;
+  const frac = (chapterIndex + (total > 0 ? currentPage / total : 0)) / chapters;
+  els.progressFill.style.width = `${Math.min(100, frac * 100)}%`;
 }
 
 function updateChapterLabel() {
@@ -219,7 +360,7 @@ function persistLocation() {
   if (!book) return;
   updateLocation(book.id, {
     chapter: chapterIndex,
-    page: Math.round(currentFraction() * 1000),
+    page: pages[currentPage]?.firstBlock ?? 0,
   });
 }
 
@@ -234,7 +375,7 @@ function buildContentsMenu() {
     li.textContent = ch.title || `Chapter ${i + 1}`;
     li.addEventListener("click", () => {
       chapterIndex = i;
-      renderChapter(0);
+      paginateChapter(0);
       els.contentsPanel.classList.add("hidden");
     });
     list.appendChild(li);
@@ -247,9 +388,15 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Wrap every dictionary word in the chapter. With a single scrolling column the
-// whole chapter is laid out at once, so there's no per-page banding — one pass
-// on render (and on dictionary change) is enough.
+// Re-paginate the current chapter after the dictionary changes, keeping place.
+export function refreshHighlights() {
+  if (!isOpen()) return;
+  paginateChapter(pages[currentPage]?.firstBlock ?? 0);
+}
+
+// Wrap every dictionary word across all page boxes of the current chapter. The
+// highlight style is a box-shadow (see CSS), so wrapping never changes layout —
+// safe to run after pagination without disturbing the page breaks.
 function applyHighlights() {
   const dict = getDict();
   const words = Object.keys(dict);
@@ -277,8 +424,8 @@ function applyHighlights() {
     }
   }
 
-  // Wrap in reverse document order so surrounding one match doesn't invalidate
-  // the offsets of earlier matches in the same text node.
+  // Wrap in reverse so surrounding one match doesn't invalidate earlier offsets
+  // in the same text node.
   for (const [range, word] of ranges.reverse()) {
     const span = document.createElement("span");
     span.className = "custom-highlight";

@@ -607,16 +607,17 @@ body {
 }
 .page-viewport {
   flex: 1;
-  /* Vertical scrolling within a chapter. Momentum scrolling on iOS, and the
-     content column is a single normal flow so every word stays selectable. */
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* the current page is windowed; others sit off to the side */
   padding: 34px 40px;
   margin: 18px 0;
   min-width: 0;
 }
+/* #book-text is a horizontal row of discrete page boxes (built by reader.js).
+   Each page is real, normal-flow content — no CSS multi-column fragmentation —
+   so iOS Safari can select any word. Flipping shifts the row with translateX. */
 .book-text {
+  display: flex;
+  align-items: flex-start;
   font-family: var(--font-read);
   font-size: 20px;
   line-height: 1.65;
@@ -624,6 +625,31 @@ body {
   padding: 0;
   text-align: justify;
   hyphens: auto;
+  transform: translateX(0);
+  will-change: transform;
+}
+/* The slide is applied only for genuine flips; pagination/resize snap instantly. */
+.book-text.slide {
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .book-text.slide {
+    transition: none;
+  }
+}
+/* One page. Width/height are set inline (measured from the viewport). */
+.reader-page {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+/* Drop the trailing margin so it doesn't count toward the page's fill height. */
+.reader-page > *:last-child {
+  margin-bottom: 0;
+}
+/* A paragraph continued from the previous page gets no first-line indent. */
+.reader-page p.cont {
+  text-indent: 0;
 }
 
 /* ---- Preserved EPUB/text formatting ---- */
@@ -1046,11 +1072,32 @@ body {
     padding: 10px 18px;
   }
 
-  /* Reader: give the text the full width. Chapter changes happen by horizontal
-     swipe (or the Contents menu); the arrow controls are hidden on mobile so an
-     edge tap can't jump chapters while you're scrolling. */
+  /* Reader: give the text almost the full width. The arrows overlay the edges
+     (absolute, out of the flex flow) as invisible tap zones that flip the page;
+     horizontal swiping flips too. */
   .reader-stage .page-button {
-    display: none;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    z-index: 5;
+    color: transparent;
+    background: transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reader-stage .page-button:hover,
+  .reader-stage .page-button:active,
+  .reader-stage .page-button:focus,
+  .reader-stage .page-button:focus-visible {
+    color: transparent;
+    background: transparent;
+    outline: none;
+  }
+  .reader-stage .page-prev {
+    left: 0;
+  }
+  .reader-stage .page-next {
+    right: 0;
   }
   .page-viewport {
     padding: 20px 30px;
