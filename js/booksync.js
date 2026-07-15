@@ -7,7 +7,7 @@ import { getClient } from "./supabaseClient.js";
 import { getBook, putBook, deleteBook as deleteLocalBook } from "./storage.js";
 
 const TABLE = "books";
-const COLUMNS = "id, title, author, format, cover, chapters";
+const COLUMNS = "id, title, author, format, cover, chapters, deleted";
 
 // Convert a DB row into a local book record owned by the current user.
 function rowToBook(row, ownerId) {
@@ -41,7 +41,13 @@ export async function uploadBook(book) {
   if (error) console.error("Book upload failed:", error);
 }
 
-// Pull the user's cloud books into IndexedDB (skips any already cached).
+// Pull the user's cloud books into IndexedDB and reconcile deletions.
+//
+// Deletions use tombstones (rows flagged deleted=true), NOT absence from the
+// result set: we ONLY remove a local book when the cloud explicitly says it was
+// deleted. A failed/empty pull returns early above and can never wipe the
+// library — the safety property that a naive "delete anything not in the pull"
+// reconcile lacked (it once blanked the phone).
 export async function pullBooks(ownerId, onChange) {
   const sb = await getClient();
   if (!sb) return;
@@ -50,20 +56,30 @@ export async function pullBooks(ownerId, onChange) {
     console.error("Book pull failed:", error);
     return;
   }
-  let added = 0;
+  let changed = 0;
   for (const row of data) {
+    if (row.deleted) {
+      // Tombstone: drop the local copy if we still have it.
+      if (await getBook(row.id)) {
+        await deleteLocalBook(row.id);
+        changed++;
+      }
+      continue;
+    }
     if (await getBook(row.id)) continue; // already cached
     await putBook(rowToBook(row, ownerId));
-    added++;
+    changed++;
   }
-  if (added > 0) onChange();
+  if (changed > 0) onChange();
 }
 
-// Remove a book from the cloud (its local copy is deleted by the caller).
+// Soft-delete a book in the cloud: flag it as a tombstone rather than removing
+// the row, so every other device learns of the deletion on its next pull (and
+// live via realtime). The local copy is deleted by the caller.
 export async function deleteBookRemote(id) {
   const sb = await getClient();
   if (!sb) return;
-  const { error } = await sb.from(TABLE).delete().eq("id", id);
+  const { error } = await sb.from(TABLE).update({ deleted: true }).eq("id", id);
   if (error) console.error("Book delete failed:", error);
 }
 
@@ -77,12 +93,17 @@ export async function initBooksRealtime(ownerId, onChange) {
       { event: "*", schema: "public", table: TABLE },
       async (payload) => {
         if (payload.eventType === "DELETE") {
+          // Legacy hard-deletes (pre-tombstone). Still honor them if any exist.
           const id = payload.old?.id;
           if (id) await deleteLocalBook(id);
         } else {
           const row = payload.new;
-          if (row?.id && !(await getBook(row.id))) {
-            await putBook(rowToBook(row, ownerId));
+          if (row?.id) {
+            if (row.deleted) {
+              await deleteLocalBook(row.id); // tombstone from another device
+            } else if (!(await getBook(row.id))) {
+              await putBook(rowToBook(row, ownerId));
+            }
           }
         }
         onChange();
