@@ -2,8 +2,18 @@
 <html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Books — Reader</title>
+
+    <!-- PWA / Add to Home Screen: launched from the home screen the app runs
+         standalone — no Safari toolbar, true fullscreen. (iPhone Safari has no
+         in-page fullscreen API; this is the supported way to hide the chrome.) -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Books" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
 
     <!-- Stale-HTML guard. The import map below (and the ?v=N on every asset) only
          refreshes modules once THIS file is re-fetched — but iOS Safari caches
@@ -14,7 +24,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 19;
+      window.APP_VERSION = 20;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -30,7 +40,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=19" />
+    <link rel="stylesheet" href="css/styles.css?v=20" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -43,21 +53,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=19",
-          "./js/library.js": "./js/library.js?v=19",
-          "./js/reader.js": "./js/reader.js?v=19",
-          "./js/dictionary.js": "./js/dictionary.js?v=19",
-          "./js/translate.js": "./js/translate.js?v=19",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=19",
-          "./js/folder.js": "./js/folder.js?v=19",
-          "./js/sync.js": "./js/sync.js?v=19",
-          "./js/auth.js": "./js/auth.js?v=19",
-          "./js/storage.js": "./js/storage.js?v=19",
-          "./js/booksync.js": "./js/booksync.js?v=19",
-          "./js/import.js": "./js/import.js?v=19",
-          "./js/epub.js": "./js/epub.js?v=19",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=19",
-          "./js/config.js": "./js/config.js?v=19"
+          "./js/main.js": "./js/main.js?v=20",
+          "./js/library.js": "./js/library.js?v=20",
+          "./js/reader.js": "./js/reader.js?v=20",
+          "./js/dictionary.js": "./js/dictionary.js?v=20",
+          "./js/translate.js": "./js/translate.js?v=20",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=20",
+          "./js/folder.js": "./js/folder.js?v=20",
+          "./js/sync.js": "./js/sync.js?v=20",
+          "./js/auth.js": "./js/auth.js?v=20",
+          "./js/storage.js": "./js/storage.js?v=20",
+          "./js/booksync.js": "./js/booksync.js?v=20",
+          "./js/import.js": "./js/import.js?v=20",
+          "./js/epub.js": "./js/epub.js?v=20",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=20",
+          "./js/config.js": "./js/config.js?v=20"
         }
       }
     </script>
@@ -213,6 +223,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=19"></script>
+    <script type="module" src="js/main.js?v=20"></script>
   </body>
 </html>

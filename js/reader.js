@@ -105,6 +105,18 @@ function initSwipe() {
     },
     { passive: true },
   );
+  // Kill vertical scroll/rubber-band attempts while swiping the page. CSS
+  // touch-action:pan-x covers modern iOS; this handles the rest. Selection
+  // drags are exempt so iOS can still move the native selection handles.
+  els.viewport.addEventListener(
+    "touchmove",
+    (e) => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+      e.preventDefault();
+    },
+    { passive: false },
+  );
   els.viewport.addEventListener(
     "touchend",
     (e) => {
