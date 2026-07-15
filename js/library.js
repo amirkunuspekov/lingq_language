@@ -116,13 +116,24 @@ export async function render() {
   }
 }
 
+// Overall reading fraction (0–1) for the progress bar. Prefer the stored
+// fraction (written as you read); fall back to a chapter-based estimate for
+// books opened on another device before this field existed.
+function readingProgress(book) {
+  const loc = book.lastLocation || {};
+  if (typeof loc.progress === "number") return Math.min(1, Math.max(0, loc.progress));
+  const n = book.chapters?.length || 0;
+  return n ? Math.min(1, (loc.chapter || 0) / n) : 0;
+}
+
 function renderHero(book, total) {
   if (!book) {
     els.hero.classList.add("hidden");
     return;
   }
   els.hero.classList.remove("hidden");
-  const progress = book.lastOpenedAt ? "Continue Reading" : "Start Reading";
+  const started = !!book.lastOpenedAt;
+  const label = started ? "Continue Reading" : "Start Reading";
   els.hero.innerHTML = "";
 
   const cover = document.createElement("img");
@@ -140,9 +151,22 @@ function renderHero(book, total) {
       (book.chapters?.length ?? 0) === 1 ? "" : "s"
     } · ${total} book${total === 1 ? "" : "s"} in library</p>
   `;
+
+  // Progress bar (only once the book has actually been opened).
+  if (started) {
+    const pct = Math.round(readingProgress(book) * 100);
+    const prog = document.createElement("div");
+    prog.className = "hero-progress";
+    prog.innerHTML = `
+      <div class="hero-progress-track"><div class="hero-progress-fill" style="width:${pct}%"></div></div>
+      <span class="hero-progress-pct">${pct}%</span>
+    `;
+    info.appendChild(prog);
+  }
+
   const btn = document.createElement("button");
   btn.className = "hero-btn";
-  btn.textContent = progress;
+  btn.textContent = label;
   btn.addEventListener("click", () => onOpenBook(book.id));
   info.appendChild(btn);
 

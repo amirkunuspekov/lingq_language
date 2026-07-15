@@ -6,52 +6,68 @@
 :root {
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
     system-ui, sans-serif;
-  --font-read: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
-    "Times New Roman", serif;
+  /* Newsreader is the reading + display serif (loaded in index.html); Georgia
+     is the offline fallback. */
+  --font-read: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-display: "Newsreader", Georgia, serif;
 
-  --bg: #f2f2f5;
-  --panel: #ffffff;
-  --sidebar-bg: #f7f7f9;
-  --text: #1c1c1e;
-  --text-dim: #6e6e73;
-  --border: #e2e2e6;
-  --accent: #d1442f; /* Apple Books red-orange */
-  --accent-soft: #fdeae6;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  /* Warm paper, not cold white. */
+  --bg: #E7E4DD; /* greige canvas */
+  --panel: #FCFAF5; /* card / surface */
+  --sidebar-bg: #F1EFE8;
+  --text: #211F1A; /* near-black ink */
+  --text-dim: #7A7266; /* secondary */
+  --text-faint: #A79F92; /* eyebrows / labels */
+  --border: #DED8CC;
+  --accent: #BC5E3A; /* terracotta */
+  --accent-hover: #9E4B2C;
+  --accent-soft: #F1E4DB; /* soft terracotta tint */
+  --shadow: 0 22px 48px -22px rgba(60, 45, 30, 0.34);
+  --shadow-sm: 0 8px 22px -12px rgba(60, 45, 30, 0.22);
 
-  --reader-bg: #f6f4ef;
-  --reader-page: #fffdf9;
-  --reader-text: #2b2b2b;
-  --highlight-bg: #ffe9a8;
-  --highlight-ring: #ffd867;
+  --reader-bg: #FCFAF5;
+  --reader-page: #FCFAF5;
+  --reader-text: #2A2822;
+  --highlight-bg: #F8E3BC; /* soft amber marker */
+  --highlight-ring: #E8A94F; /* active / hover */
 }
 
 :root[data-theme="sepia"] {
-  --reader-bg: #efe4cf;
-  --reader-page: #f6ecd7;
-  --reader-text: #4a3f2e;
-  --highlight-bg: #e9cf88;
-  --highlight-ring: #dcbb63;
+  --bg: #EFE7D6;
+  --panel: #F7F1E4;
+  --sidebar-bg: #F0E8D8;
+  --text: #33291B;
+  --text-dim: #7C6E58;
+  --text-faint: #A79A80;
+  --border: #E0D4BC;
+  --accent-soft: #EFE0CC;
+
+  --reader-bg: #F3EAD8;
+  --reader-page: #F3EAD8;
+  --reader-text: #43392A;
+  --highlight-bg: #ECD39A;
+  --highlight-ring: #D8A85A;
 }
 
 :root[data-theme="dark"] {
-  --bg: #1c1c1e;
-  --panel: #2a2a2c;
-  --sidebar-bg: #202022;
-  --text: #f2f2f5;
-  --text-dim: #9a9aa0;
-  --border: #3a3a3c;
-  --accent: #ff6b52;
-  --accent-soft: #3a2320;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --bg: #201E1A; /* warm dark, not blue-black */
+  --panel: #2A2723;
+  --sidebar-bg: #24211D;
+  --text: #EFEAE0;
+  --text-dim: #A79F92;
+  --text-faint: #857D70;
+  --border: #3A362F;
+  --accent: #E0794F; /* warmer terracotta for dark */
+  --accent-hover: #EC8A5F;
+  --accent-soft: #3A2A20;
+  --shadow: 0 22px 48px -22px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 8px 22px -12px rgba(0, 0, 0, 0.5);
 
-  --reader-bg: #161617;
-  --reader-page: #1f1f21;
-  --reader-text: #d8d8dc;
-  --highlight-bg: #5c4a1e;
-  --highlight-ring: #7a6220;
+  --reader-bg: #1B1916;
+  --reader-page: #201E1A;
+  --reader-text: #D9D3C7;
+  --highlight-bg: #5A4A22;
+  --highlight-ring: #8A6A2E;
 }
 
 * {
@@ -100,12 +116,15 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
   padding: 6px 8px;
 }
 .brand-icon {
-  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
 }
 
 .nav {
@@ -137,7 +156,9 @@ body {
   font-weight: 600;
 }
 .nav-ico {
-  font-size: 16px;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
 }
 
 .import-btn {
@@ -214,8 +235,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 24px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
 }
 .auth-sub {
   margin: 0 0 8px;
@@ -259,9 +281,10 @@ body {
 }
 .view-head h1 {
   margin: 0;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .view-head-tools {
   display: flex;
@@ -270,11 +293,12 @@ body {
 }
 
 .section-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-transform: none;
-  margin: 28px 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 30px 0 14px;
 }
 
 /* Reading Now hero */
@@ -282,9 +306,9 @@ body {
   display: flex;
   gap: 28px;
   align-items: center;
-  background: linear-gradient(135deg, var(--panel), rgba(128, 128, 128, 0.05));
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 26px 30px;
   box-shadow: var(--shadow-sm);
 }
@@ -305,15 +329,17 @@ body {
   margin: 0;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--text-faint);
 }
 .hero-title {
   margin: 2px 0;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 .hero-author {
   margin: 0;
@@ -324,6 +350,32 @@ body {
   margin: 4px 0 12px;
   color: var(--text-dim);
   font-size: 13px;
+}
+/* Reading progress on the Reading Now card (mirrors the design's Weiterlesen). */
+.hero-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 16px;
+  max-width: 340px;
+}
+.hero-progress-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-dim) 22%, transparent);
+  overflow: hidden;
+}
+.hero-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.hero-progress-pct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 .hero-btn {
   align-self: flex-start;
@@ -451,9 +503,10 @@ body {
 
 .book-card-title {
   margin-top: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.3;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.25;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -477,8 +530,11 @@ body {
   padding: 40px 20px;
 }
 .empty-emoji {
-  font-size: 44px;
-  margin: 0 0 8px;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  display: block;
+  color: var(--text-faint);
 }
 .empty-sub {
   font-size: 13px;
@@ -571,7 +627,9 @@ body {
   border-bottom: none;
 }
 .wl-word {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
   width: 30%;
 }
 .wl-trans-input {
@@ -757,8 +815,8 @@ body {
 .book-text h4,
 .book-text h5,
 .book-text h6 {
-  font-family: var(--font-ui);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: 600;
   line-height: 1.25;
   color: var(--reader-text);
   text-align: left;
@@ -776,7 +834,7 @@ body {
 .book-text h2 {
   font-size: 1.45em;
   margin: 0.3em 0 0.7em;
-  color: var(--accent);
+  color: var(--reader-text);
 }
 .book-text h3 {
   font-size: 1.2em;
@@ -784,7 +842,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 0.95em;
-  color: color-mix(in srgb, var(--reader-text) 75%, var(--accent));
+  color: color-mix(in srgb, var(--reader-text) 68%, transparent);
 }
 .book-text h4,
 .book-text h5,
@@ -796,7 +854,7 @@ body {
 .book-text strong,
 .book-text b {
   font-weight: 700;
-  color: color-mix(in srgb, var(--reader-text) 100%, var(--accent) 8%);
+  color: var(--reader-text);
 }
 .book-text em,
 .book-text i {
@@ -986,19 +1044,24 @@ body {
   border: none;
   background: var(--accent);
   color: #fff;
-  font: inherit;
+  font-family: var(--font-ui);
   font-weight: 600;
   font-size: 15px;
-  padding: 10px 16px;
-  border-radius: 22px;
-  box-shadow: var(--shadow);
+  padding: 11px 18px;
+  border-radius: 13px;
+  box-shadow: 0 14px 30px -12px rgba(60, 45, 30, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   white-space: nowrap;
   -webkit-user-select: none;
   user-select: none;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 .sel-toolbar:hover {
-  filter: brightness(1.05);
+  background: var(--accent-hover);
+}
+.sel-toolbar:active {
+  transform: scale(0.97);
 }
 
 .translation-popover {
@@ -1006,22 +1069,26 @@ body {
   z-index: 1000;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   box-shadow: var(--shadow);
-  padding: 10px 14px;
-  max-width: 260px;
+  padding: 16px 18px;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 .pop-word {
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.05;
+  color: var(--text);
 }
 .pop-trans {
-  font-size: 16px;
-  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--text-dim);
 }
 
 .translation-modal {
@@ -1048,8 +1115,10 @@ body {
 }
 .modal-word {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
 }
 .translation-modal textarea {
   width: 100%;

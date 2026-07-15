@@ -81,10 +81,25 @@ export async function updateLocation(id, location) {
 }
 
 // Apply reading position that came from another device (no re-push).
+// The synced row carries only {chapter, page}; the fine-grained `progress`
+// fraction (used by the library's progress bar) lives locally. Preserve it when
+// the incoming position is the same spot we already stored — this includes the
+// realtime echo of our OWN last push, which would otherwise wipe `progress` and
+// snap the bar back toward 0% right after closing the book. Only when the remote
+// genuinely points elsewhere do we fall back to a coarse chapter estimate.
 export async function applyRemoteProgress(id, location) {
   const book = await getBook(id);
   if (!book) return; // book not in this device's library
-  book.lastLocation = location;
+  const prev = book.lastLocation || {};
+  const sameSpot =
+    prev.chapter === location.chapter && prev.page === location.page;
+  const progress =
+    sameSpot && typeof prev.progress === "number"
+      ? prev.progress
+      : book.chapters?.length
+        ? Math.min(1, (location.chapter || 0) / book.chapters.length)
+        : 0;
+  book.lastLocation = { ...location, progress };
   await putBook(book);
 }
 

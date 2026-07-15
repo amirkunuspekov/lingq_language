@@ -431,9 +431,18 @@ function updateChapterLabel() {
 
 function persistLocation() {
   if (!book) return;
+  const total = pages.length;
+  const chapters = book.chapters.length;
+  // Overall reading fraction (chapter + position within it) — shown as the
+  // progress bar on the library's Reading Now card. Stored locally only; the
+  // synced reading_progress row still carries just chapter/page.
+  const progress = chapters
+    ? (chapterIndex + (total > 0 ? currentPage / total : 0)) / chapters
+    : 0;
   updateLocation(book.id, {
     chapter: chapterIndex,
     page: pages[currentPage]?.firstBlock ?? 0,
+    progress,
   });
 }
 

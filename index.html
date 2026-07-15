@@ -15,6 +15,15 @@
     <meta name="apple-mobile-web-app-title" content="Books" />
     <link rel="apple-touch-icon" href="icon-180.png" />
 
+    <!-- Newsreader: the reading serif (headings + book text). Falls back to
+         Georgia offline. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Stale-HTML guard. The import map below (and the ?v=N on every asset) only
          refreshes modules once THIS file is re-fetched — but iOS Safari caches
          index.html aggressively, so a version bump alone can leave the phone
@@ -24,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 22;
+      window.APP_VERSION = 25;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -40,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=22" />
+    <link rel="stylesheet" href="css/styles.css?v=25" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -53,21 +62,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=22",
-          "./js/library.js": "./js/library.js?v=22",
-          "./js/reader.js": "./js/reader.js?v=22",
-          "./js/dictionary.js": "./js/dictionary.js?v=22",
-          "./js/translate.js": "./js/translate.js?v=22",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=22",
-          "./js/folder.js": "./js/folder.js?v=22",
-          "./js/sync.js": "./js/sync.js?v=22",
-          "./js/auth.js": "./js/auth.js?v=22",
-          "./js/storage.js": "./js/storage.js?v=22",
-          "./js/booksync.js": "./js/booksync.js?v=22",
-          "./js/import.js": "./js/import.js?v=22",
-          "./js/epub.js": "./js/epub.js?v=22",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=22",
-          "./js/config.js": "./js/config.js?v=22"
+          "./js/main.js": "./js/main.js?v=25",
+          "./js/library.js": "./js/library.js?v=25",
+          "./js/reader.js": "./js/reader.js?v=25",
+          "./js/dictionary.js": "./js/dictionary.js?v=25",
+          "./js/translate.js": "./js/translate.js?v=25",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=25",
+          "./js/folder.js": "./js/folder.js?v=25",
+          "./js/sync.js": "./js/sync.js?v=25",
+          "./js/auth.js": "./js/auth.js?v=25",
+          "./js/storage.js": "./js/storage.js?v=25",
+          "./js/booksync.js": "./js/booksync.js?v=25",
+          "./js/import.js": "./js/import.js?v=25",
+          "./js/epub.js": "./js/epub.js?v=25",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=25",
+          "./js/config.js": "./js/config.js?v=25"
         }
       }
     </script>
@@ -79,7 +88,7 @@
     <!-- Auth gate (shown only when Supabase is configured and no session) -->
     <div id="auth-gate" class="auth-gate hidden">
       <form id="auth-form" class="auth-card">
-        <div class="auth-brand"><span>📖</span> Books</div>
+        <div class="auth-brand"><svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H18a1 1 0 0 1 1 1v13.5a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5.5Z"/><path d="M8 4v14"/></svg> Books</div>
         <p class="auth-sub">Sign in to sync your books &amp; words across devices</p>
         <input id="auth-email" type="email" placeholder="Email" autocomplete="email" required />
         <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" minlength="6" required />
@@ -93,15 +102,17 @@
       <!-- Sidebar (Apple Books–style nav) -->
       <aside id="sidebar">
         <div class="brand">
-          <span class="brand-icon">📖</span>
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H18a1 1 0 0 1 1 1v13.5a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5.5Z"/><path d="M8 4v14"/></svg>
           <span class="brand-name">Books</span>
         </div>
         <nav class="nav">
           <button id="nav-library" class="nav-item active">
-            <span class="nav-ico">📚</span> Library
+            <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5.3 8.5 4.8 4.5 5v13c4-.2 6 .3 7.5 1.5 1.5-1.2 3.5-1.7 7.5-1.5V5c-4-.2-6 .3-7.5 1.5Z"/><path d="M12 6.5V19"/></svg>
+            Library
           </button>
           <button id="nav-wordlist" class="nav-item">
-            <span class="nav-ico">🗂️</span> Word List
+            <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="10" rx="2"/><path d="M7 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></svg>
+            Word List
           </button>
         </nav>
         <button id="import-btn" class="import-btn">＋ Import Book</button>
@@ -128,7 +139,7 @@
 
         <h3 class="section-label">All Books</h3>
         <div id="library-empty" class="empty-state hidden">
-          <p class="empty-emoji">📚</p>
+          <svg class="empty-emoji" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5.3 8.5 4.8 4.5 5v13c4-.2 6 .3 7.5 1.5 1.5-1.2 3.5-1.7 7.5-1.5V5c-4-.2-6 .3-7.5 1.5Z"/><path d="M12 6.5V19"/></svg>
           <p>Your library is empty.</p>
           <p class="empty-sub">Click <strong>Import Book</strong> or drop an <code>.epub</code> / <code>.txt</code> file here.</p>
         </div>
@@ -151,7 +162,7 @@
         </form>
         <input id="wl-search" class="wl-search" type="search" placeholder="Search words or translations…" />
         <div id="wl-empty" class="empty-state">
-          <p class="empty-emoji">🗂️</p>
+          <svg class="empty-emoji" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="10" rx="2"/><path d="M7 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></svg>
           <p>No translated words yet.</p>
           <p class="empty-sub">Add one above, or open a book and select a word to translate it.</p>
         </div>
@@ -223,6 +234,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=22"></script>
+    <script type="module" src="js/main.js?v=25"></script>
   </body>
 </html>

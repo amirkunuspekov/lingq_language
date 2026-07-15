@@ -89,7 +89,7 @@ function updateSelToolbar() {
   selAnchor = { x: rect.left + rect.width / 2, y: rect.top };
 
   const btn = els.selToolbar;
-  btn.textContent = hasEntry(text) ? "👁  Show translation" : "＋  Add translation";
+  btn.textContent = hasEntry(text) ? "Show translation" : "Add translation";
   btn.classList.remove("hidden");
 
   const bw = btn.getBoundingClientRect();
