@@ -4,6 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Books — Reader</title>
+
+    <!-- Stale-HTML guard. The import map below (and the ?v=N on every asset) only
+         refreshes modules once THIS file is re-fetched — but iOS Safari caches
+         index.html aggressively, so a version bump alone can leave the phone
+         running old code indefinitely. This runs before anything else: it fetches
+         version.json (uncached) and, if the deployed version is newer than the one
+         baked into this cached copy, reloads with a cache-busting URL so Safari is
+         forced to pull a fresh index.html (which cascades to fresh modules).
+         On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
+    <script>
+      window.APP_VERSION = 15;
+      (async () => {
+        try {
+          const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+          const { version } = await res.json();
+          if (version && version !== window.APP_VERSION) {
+            const key = "app-reloaded-for-" + version;
+            if (!sessionStorage.getItem(key)) {
+              sessionStorage.setItem(key, "1");
+              location.replace(location.pathname + "?v=" + version);
+            }
+          }
+        } catch { /* offline or no version.json — keep running the cached copy */ }
+      })();
+    </script>
+
     <link rel="stylesheet" href="css/styles.css?v=15" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
@@ -11,7 +37,9 @@
          Safari would keep serving them from cache. This import map rewrites every
          local module to a versioned URL so one bump refreshes the whole app.
          To ship a new version: bump every `?v=N` in this file to the next number,
-         e.g. replace v=3 with v=4 everywhere. Remote imports are version-pinned. -->
+         e.g. replace v=3 with v=4 everywhere. ALSO bump APP_VERSION in the script
+         above AND the number in version.json to the same N, so the stale-HTML guard
+         can detect the update. Remote imports are version-pinned. -->
     <script type="importmap">
       {
         "imports": {
