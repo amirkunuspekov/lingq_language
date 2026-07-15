@@ -76,14 +76,31 @@ function visibleTo(book, ownerId) {
 
 export async function render() {
   const ownerId = ctx.getOwnerId();
-  const books = (await getAllBooks()).filter((b) => visibleTo(b, ownerId));
+
+  let books = [];
+  try {
+    const all = await getAllBooks();
+    // Defensive: skip records that are malformed (e.g. a partial/legacy row with
+    // no chapters). A single bad record must never blank the whole library —
+    // before this guard, such a record threw in renderHero and left the page
+    // silently empty (no cards, not even the empty state).
+    books = all.filter((b) => b && Array.isArray(b.chapters) && visibleTo(b, ownerId));
+  } catch (err) {
+    console.error("Library render: getAllBooks failed:", err);
+  }
 
   // Reading Now hero = most recently opened book (if any).
   const hero = books.find((b) => b.lastOpenedAt) || books[0];
-  renderHero(hero, books.length);
-
   const grid = els.grid;
   grid.innerHTML = "";
+
+  try {
+    renderHero(hero, books.length);
+  } catch (err) {
+    console.error("Library render: hero failed:", err);
+    els.hero.classList.add("hidden");
+  }
+
   if (books.length === 0) {
     els.emptyState.classList.remove("hidden");
     return;
@@ -91,7 +108,11 @@ export async function render() {
   els.emptyState.classList.add("hidden");
 
   for (const book of books) {
-    grid.appendChild(bookCard(book));
+    try {
+      grid.appendChild(bookCard(book));
+    } catch (err) {
+      console.error("Library render: card failed for", book?.id, err);
+    }
   }
 }
 
@@ -115,8 +136,8 @@ function renderHero(book, total) {
     <p class="hero-eyebrow">Reading Now</p>
     <h2 class="hero-title">${escapeHtml(book.title)}</h2>
     <p class="hero-author">${escapeHtml(book.author)}</p>
-    <p class="hero-meta">${book.chapters.length} chapter${
-      book.chapters.length === 1 ? "" : "s"
+    <p class="hero-meta">${(book.chapters?.length ?? 0)} chapter${
+      (book.chapters?.length ?? 0) === 1 ? "" : "s"
     } · ${total} book${total === 1 ? "" : "s"} in library</p>
   `;
   const btn = document.createElement("button");
