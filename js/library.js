@@ -150,6 +150,65 @@ function renderHero(book, total) {
   cover.addEventListener("click", () => onOpenBook(book.id));
 }
 
+// Remove a book from the library (local + cloud). Shared by the ⋯ menu and the
+// desktop right-click path.
+async function removeBook(book) {
+  if (book.source === "folder") {
+    alert(
+      `“${book.title}” is managed by the books/ folder.\n` +
+        `To remove it, delete its file from books/ and update books/index.json.`,
+    );
+    return;
+  }
+  if (!confirm(`Remove “${book.title}” from your library?`)) return;
+  await deleteBook(book.id);
+  if (book.owner) ctx.onDeleted(book.id); // soft-delete in the cloud too
+  await render();
+}
+
+// A tiny floating menu anchored to a card's ⋯ button. Only one is open at a
+// time. Lives on <body> so the cover's `overflow:hidden` can't clip it.
+let cardMenuEl = null;
+function closeCardMenu() {
+  if (cardMenuEl) cardMenuEl.remove();
+  cardMenuEl = null;
+  document.removeEventListener("click", closeCardMenu, true);
+  window.removeEventListener("resize", closeCardMenu);
+}
+function openCardMenu(anchor, book) {
+  closeCardMenu();
+  const menu = document.createElement("div");
+  menu.className = "card-menu";
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "card-menu-item danger";
+  del.textContent = "Delete";
+  del.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    closeCardMenu();
+    await removeBook(book);
+  });
+  menu.appendChild(del);
+
+  document.body.appendChild(menu);
+  cardMenuEl = menu;
+
+  // Position under the button, kept within the viewport.
+  const r = anchor.getBoundingClientRect();
+  const mw = menu.offsetWidth;
+  let left = r.right - mw;
+  if (left < 8) left = 8;
+  if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+  menu.style.top = `${r.bottom + 6}px`;
+  menu.style.left = `${left}px`;
+
+  // Dismiss on any outside click (next tick so this opening click doesn't close
+  // it) or on resize.
+  setTimeout(() => document.addEventListener("click", closeCardMenu, true), 0);
+  window.addEventListener("resize", closeCardMenu);
+}
+
 function bookCard(book) {
   const card = document.createElement("div");
   card.className = "book-card";
@@ -162,6 +221,18 @@ function bookCard(book) {
   img.src = coverUrl(book);
   img.alt = book.title;
   shelf.appendChild(img);
+
+  // ⋯ options button (primary delete path on touch, where there's no right-click).
+  const menuBtn = document.createElement("button");
+  menuBtn.type = "button";
+  menuBtn.className = "book-menu-btn";
+  menuBtn.textContent = "⋯";
+  menuBtn.setAttribute("aria-label", "Book options");
+  menuBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // don't open the book
+    openCardMenu(menuBtn, book);
+  });
+  shelf.appendChild(menuBtn);
 
   const title = document.createElement("div");
   title.className = "book-card-title";
@@ -176,20 +247,9 @@ function bookCard(book) {
   card.addEventListener("keydown", (e) => {
     if (e.key === "Enter") onOpenBook(book.id);
   });
-  card.addEventListener("contextmenu", async (e) => {
+  card.addEventListener("contextmenu", (e) => {
     e.preventDefault();
-    if (book.source === "folder") {
-      alert(
-        `“${book.title}” is managed by the books/ folder.\n` +
-          `To remove it, delete its file from books/ and update books/index.json.`,
-      );
-      return;
-    }
-    if (confirm(`Remove “${book.title}” from your library?`)) {
-      await deleteBook(book.id);
-      if (book.owner) ctx.onDeleted(book.id); // remove from cloud too
-      await render();
-    }
+    removeBook(book);
   });
   return card;
 }
