@@ -1250,7 +1250,10 @@ body {
     right: 0;
   }
   .page-viewport {
-    padding: 20px 30px;
+    /* Standalone (home-screen) mode has no browser toolbar above the reader, so
+       push the text comfortably clear of the status bar / camera cutout. In
+       normal Safari the inset is 0 and this stays 20px. */
+    padding: calc(20px + env(safe-area-inset-top)) 30px 20px;
     margin: 8px 0;
   }
   .book-text {
