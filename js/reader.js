@@ -366,18 +366,52 @@ function flip(dir) {
       currentPage++;
       showPage(true);
     } else if (chapterIndex < book.chapters.length - 1) {
-      chapterIndex++;
-      paginateChapter(0);
+      flipChapter(chapterIndex + 1, 0, +1);
     }
   } else {
     if (currentPage > 0) {
       currentPage--;
       showPage(true);
     } else if (chapterIndex > 0) {
-      chapterIndex--;
-      paginateChapter(Number.MAX_SAFE_INTEGER); // land on the last page
+      flipChapter(chapterIndex - 1, Number.MAX_SAFE_INTEGER, -1); // land on the last page
     }
   }
+}
+
+// Cross-chapter flip with the same slide animation as an in-chapter flip.
+// The outgoing page can't just translate away — repaginating replaces the whole
+// row — so freeze a clone of it over the viewport, build the new chapter, start
+// the new page one slot off to the side, then slide both in tandem: visually a
+// single continuous row, exactly like flipping within a chapter.
+function flipChapter(newIndex, targetBlock, dir) {
+  // 1. Snapshot the outgoing page at its current spot inside the viewport.
+  const vpStyle = getComputedStyle(els.viewport);
+  const snap = document.createElement("div");
+  snap.className = "page-snap";
+  snap.style.left = vpStyle.paddingLeft;
+  snap.style.top = vpStyle.paddingTop;
+  const outgoing = els.bookText.children[currentPage];
+  if (outgoing) snap.appendChild(outgoing.cloneNode(true));
+  els.viewport.appendChild(snap);
+
+  // 2. Build the new chapter and land on its target page (synchronous — the
+  //    intermediate, un-offset state is never painted).
+  chapterIndex = newIndex;
+  paginateChapter(targetBlock);
+
+  // 3. Slide: incoming row starts one page slot beyond its target; the snapshot
+  //    exits toward the opposite side at the same speed.
+  const row = els.bookText;
+  const step = pageW + GAP;
+  const target = -currentPage * step;
+  row.style.transform = `translateX(${target + dir * step}px)`;
+  void row.offsetWidth; // commit the start positions before animating
+  row.classList.add("slide");
+  row.style.transform = `translateX(${target}px)`;
+  snap.classList.add("slide");
+  snap.style.transform = `translateX(${-dir * step}px)`;
+  snap.addEventListener("transitionend", () => snap.remove(), { once: true });
+  setTimeout(() => snap.remove(), 600); // fallback (e.g. reduced-motion: no event)
 }
 
 function updateProgress() {

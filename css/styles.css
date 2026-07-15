@@ -690,6 +690,18 @@ body {
   /* Only horizontal pans are meaningful here (page flips). Blocks the browser
      from starting a vertical scroll/bounce mid-swipe on touch devices. */
   touch-action: pan-x;
+  position: relative; /* anchors the .page-snap chapter-flip overlay */
+}
+/* Frozen clone of the outgoing page during a cross-chapter flip (reader.js
+   flipChapter). Slides out in tandem with the incoming chapter's row. */
+.page-snap {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page-snap.slide {
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 /* #book-text is a horizontal row of discrete page boxes (built by reader.js).
    Each page is real, normal-flow content — no CSS multi-column fragmentation —
@@ -712,7 +724,8 @@ body {
   transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  .book-text.slide {
+  .book-text.slide,
+  .page-snap.slide {
     transition: none;
   }
 }
