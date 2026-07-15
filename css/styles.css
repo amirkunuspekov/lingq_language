@@ -161,11 +161,18 @@ body {
 }
 
 .account {
+  position: relative;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+/* Desktop: no avatar button; the menu is a plain inline column. */
+.account-btn {
+  display: none;
+}
+.account-menu {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
 }
 .whoami {
   font-size: 12px;
@@ -1078,15 +1085,93 @@ body {
   #app {
     grid-template-columns: 1fr;
   }
+
+  /* The sidebar becomes a compact two-row header:
+       row 1:  📖 Books ..................... (A) avatar
+       row 2:  [Library] [Word List] ... [＋ Import Book]      */
   #sidebar {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr auto;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px 16px;
+    gap: 12px 12px;
+    padding: 10px 16px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0;
+    font-size: 18px;
+  }
+  .account {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    padding: 0;
+    border-top: none;
+  }
+  .nav {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: row;
+    gap: 6px;
+    min-width: 0;
+  }
+  .nav-item {
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .import-btn {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    margin-top: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    white-space: nowrap;
   }
   .sidebar-foot {
     display: none;
+  }
+
+  /* Account: round avatar button; the email + sign-out live in a dropdown. */
+  .account-btn {
+    display: block;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .account-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1000;
+    min-width: 200px;
+    padding: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  }
+  .account-menu.open {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .whoami {
+    font-size: 13px;
   }
   .main-scroll {
     padding: 20px;

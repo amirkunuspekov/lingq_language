@@ -22,7 +22,18 @@ export async function initAuth(callbacks) {
     signup: $("auth-signup"),
     signout: $("sign-out"),
     whoami: $("whoami"),
+    accountBtn: $("account-btn"),
+    accountMenu: $("account-menu"),
   };
+
+  // Mobile avatar button toggles the account dropdown; any outside click (or
+  // signing out) closes it. On desktop the menu is inline and the button is
+  // hidden by CSS, so this wiring is inert there.
+  els.accountBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    els.accountMenu.classList.toggle("open");
+  });
+  document.addEventListener("click", () => els.accountMenu.classList.remove("open"));
 
   // Local-only mode: no auth, no gate.
   if (!isConfigured()) {
@@ -57,6 +68,9 @@ function enterApp(user) {
   hideGate();
   els.whoami.textContent = user.email || "";
   els.signout.classList.remove("hidden");
+  // Avatar initial for the mobile account button.
+  els.accountBtn.textContent = (user.email || "?").charAt(0).toUpperCase();
+  els.accountBtn.classList.remove("hidden");
   cbs.onAuth(user);
 }
 
