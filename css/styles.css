@@ -580,9 +580,25 @@ body {
 
 /* ---- Word List ------------------------------------------------ */
 
+/* Word count, as a subtitle under the title (design's "128 Wörter · …"). */
 .wl-count {
+  margin: 8px 0 18px;
   color: var(--text-dim);
   font-size: 14px;
+}
+/* Plain terracotta text action (design's "CSV exportieren"). */
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.link-btn:hover {
+  color: var(--accent-hover);
 }
 .ghost-btn {
   border: 1px solid var(--border);
@@ -598,27 +614,71 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
-.wl-add-form {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+.wl-add-open {
+  padding: 8px 14px;
+  font-size: 14px;
+  white-space: nowrap;
 }
-.wl-add-input {
+
+/* Status filter tabs (design's Alle / Neu / Lerne / Gekonnt). */
+.wl-filters {
+  display: flex;
+  gap: 6px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 11px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.wl-filter {
   flex: 1;
-  min-width: 0;
-  padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: none;
+  background: none;
   font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  padding: 9px 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.wl-filter.active {
   background: var(--panel);
   color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
-.wl-add-input:focus {
-  outline: 2px solid var(--accent);
-  border-color: transparent;
-}
-.wl-add-btn {
+
+/* Status dot — also the control that cycles the status. */
+.wl-dot {
   flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.wl-dot::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.wl-dot:hover {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+}
+.wl-dot.status-new {
+  color: #e8a94f;
+}
+.wl-dot.status-learning {
+  color: #7fa368;
+}
+.wl-dot.status-known {
+  color: #c9c3b6;
 }
 .wl-search {
   width: 100%;
@@ -634,44 +694,46 @@ body {
   outline: 2px solid var(--accent);
   border-color: transparent;
 }
-.wl-table {
-  width: 100%;
-  border-collapse: collapse;
+/* Word list as one rounded card of rows (design's Wortliste). */
+.wl-card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-.wl-table th {
-  text-align: left;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
-.wl-table td {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-.wl-table tr:last-child td {
+.wl-row:last-child {
   border-bottom: none;
+}
+.wl-row-main {
+  flex: 1;
+  min-width: 0; /* let the translation input shrink instead of overflowing */
 }
 .wl-word {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 500;
-  width: 30%;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
+/* The translation stays editable in place — borderless until hover/focus. */
 .wl-trans-input {
   width: 100%;
+  margin-top: 1px;
   border: 1px solid transparent;
   background: transparent;
   font: inherit;
-  color: var(--text);
-  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 3px 6px;
+  margin-left: -6px; /* keep the text optically aligned with the word above */
   border-radius: 6px;
 }
 .wl-trans-input:hover {
@@ -681,20 +743,18 @@ body {
   outline: none;
   border-color: var(--accent);
   background: var(--bg);
-}
-.wl-del-cell {
-  width: 40px;
-  text-align: center;
+  color: var(--text);
 }
 .wl-del {
+  flex: 0 0 auto;
   border: none;
   background: transparent;
-  color: var(--text-dim);
-  font-size: 15px;
+  color: var(--text-faint);
+  font-size: 14px;
   cursor: pointer;
-  border-radius: 6px;
-  width: 28px;
-  height: 28px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
 }
 .wl-del:hover {
   background: var(--accent-soft);
@@ -1124,6 +1184,88 @@ body {
   color: var(--text-dim);
 }
 
+/* Add-word sheet: a centered card on desktop, a bottom sheet on phones. */
+.sheet {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 950;
+  width: min(420px, 92vw);
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 22px 22px 20px;
+}
+.sheet-grabber {
+  display: none;
+}
+.sheet-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+}
+.field-label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.field-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  background: var(--bg);
+  color: var(--text);
+}
+.field-input::placeholder {
+  color: var(--text-faint);
+}
+.field-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+/* Segmented control (status picker) */
+.seg {
+  display: flex;
+  gap: 6px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 11px;
+  padding: 4px;
+}
+.seg-item {
+  flex: 1;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dim);
+  padding: 9px 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.seg-item.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+.sheet-actions .ghost-btn,
+.sheet-actions .primary-btn {
+  flex: 1;
+}
+
 .translation-modal {
   position: fixed;
   top: 50%;
@@ -1304,16 +1446,26 @@ body {
     padding: 20px;
   }
 
-  /* Add-word form: wrap so the two inputs and button never squeeze on a narrow
-     screen — the word/translation inputs share the top row, button drops below. */
-  .wl-add-form {
-    flex-wrap: wrap;
+  /* The add-word form is a bottom sheet on phones (design's Wort hinzufügen). */
+  .sheet {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
   }
-  .wl-add-input {
-    flex: 1 1 40%;
+  .sheet-grabber {
+    display: block;
+    width: 38px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border);
+    margin: 0 auto 14px;
   }
-  .wl-add-btn {
-    flex: 1 1 100%;
+  .wl-filter {
+    font-size: 12px;
   }
 
   /* Reading Now hero: the compact card already fits; just let the title wrap. */

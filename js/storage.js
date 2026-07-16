@@ -142,10 +142,33 @@ function dictKey() {
   return activeUser ? `${DICT_KEY}:${activeUser}` : DICT_KEY;
 }
 
+// Learning status. Every word carries one; "learning" is the default, including
+// for every word that existed before statuses were introduced.
+export const STATUSES = ["new", "learning", "known"];
+export const DEFAULT_STATUS = "learning";
+export const STATUS_LABELS = { new: "New", learning: "Learning", known: "Known" };
+
+// An entry is { translation, status }. Older builds stored a bare translation
+// string, and sync can hand us anything, so every value is normalized on the way
+// in — that keeps the migration invisible and the rest of the app total.
+function normalizeEntry(value) {
+  if (typeof value === "string") return { translation: value, status: DEFAULT_STATUS };
+  if (value && typeof value === "object") {
+    return {
+      translation: String(value.translation ?? ""),
+      status: STATUSES.includes(value.status) ? value.status : DEFAULT_STATUS,
+    };
+  }
+  return { translation: "", status: DEFAULT_STATUS };
+}
+
 function loadDict() {
   try {
     const raw = localStorage.getItem(dictKey());
-    return raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : {};
+    const out = {};
+    for (const [word, value] of Object.entries(parsed)) out[word] = normalizeEntry(value);
+    return out;
   } catch {
     return {};
   }
@@ -190,12 +213,28 @@ export function setSyncPush(fn) {
   pushFn = fn;
 }
 
-export function setEntry(word, translation) {
+// Add or update a word. `status` is optional: an existing word keeps the status
+// it already had, a brand-new one starts at DEFAULT_STATUS.
+export function setEntry(word, translation, status) {
   const w = word.toLowerCase();
-  dict[w] = translation;
+  const entry = {
+    translation: String(translation ?? ""),
+    status: STATUSES.includes(status) ? status : dict[w]?.status || DEFAULT_STATUS,
+  };
+  dict[w] = entry;
   dictVersion++;
   persistDict();
-  if (pushFn) pushFn("set", w, translation);
+  if (pushFn) pushFn("set", w, entry);
+}
+
+// Change only the learning status of an existing word.
+export function setStatus(word, status) {
+  const w = word.toLowerCase();
+  if (!dict[w] || !STATUSES.includes(status)) return;
+  dict[w] = { ...dict[w], status };
+  dictVersion++;
+  persistDict();
+  if (pushFn) pushFn("set", w, dict[w]);
 }
 
 export function deleteEntry(word) {
@@ -211,8 +250,8 @@ export function hasEntry(word) {
 }
 
 // Apply a change that came FROM the server (no re-push).
-export function applyRemoteSet(word, translation) {
-  dict[word.toLowerCase()] = translation;
+export function applyRemoteSet(word, entry) {
+  dict[word.toLowerCase()] = normalizeEntry(entry);
   dictVersion++;
   persistDict();
 }

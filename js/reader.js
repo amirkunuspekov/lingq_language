@@ -518,7 +518,8 @@ function applyHighlights() {
     const span = document.createElement("span");
     span.className = "custom-highlight";
     span.dataset.word = word.toLowerCase();
-    span.dataset.translation = dict[word.toLowerCase()] || "";
+    span.dataset.translation = dict[word.toLowerCase()]?.translation || "";
+    span.dataset.status = dict[word.toLowerCase()]?.status || "learning";
     range.surroundContents(span);
   }
 }

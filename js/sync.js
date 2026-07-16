@@ -51,7 +51,7 @@ export async function initSync(opts = {}) {
 
 // Pull remote -> local, then push local-only words up.
 async function reconcile() {
-  const { data, error } = await sb.from(TABLE).select("word, translation, deleted");
+  const { data, error } = await sb.from(TABLE).select("word, translation, deleted, status");
   if (error) {
     console.error("Sync pull failed:", error);
     return;
@@ -61,7 +61,7 @@ async function reconcile() {
   for (const row of data) {
     remoteWords.add(row.word);
     if (row.deleted) applyRemoteDelete(row.word);
-    else applyRemoteSet(row.word, row.translation);
+    else applyRemoteSet(row.word, { translation: row.translation, status: row.status });
   }
 
   // Push words that exist only locally and were never synced (won't resurrect
@@ -69,7 +69,12 @@ async function reconcile() {
   const local = getDict();
   const newRows = Object.keys(local)
     .filter((w) => !remoteWords.has(w))
-    .map((w) => ({ word: w, translation: local[w], deleted: false }));
+    .map((w) => ({
+      word: w,
+      translation: local[w].translation,
+      status: local[w].status,
+      deleted: false,
+    }));
   if (newRows.length) {
     const { error: upErr } = await sb.from(TABLE).upsert(newRows);
     if (upErr) console.error("Sync initial push failed:", upErr);
@@ -79,12 +84,18 @@ async function reconcile() {
 }
 
 // Called by storage.js after a local set/delete.
-async function pushToRemote(op, word, translation) {
+async function pushToRemote(op, word, entry) {
   if (!sb) return;
   const row =
     op === "delete"
       ? { word, deleted: true, updated_at: new Date().toISOString() }
-      : { word, translation, deleted: false, updated_at: new Date().toISOString() };
+      : {
+          word,
+          translation: entry.translation,
+          status: entry.status,
+          deleted: false,
+          updated_at: new Date().toISOString(),
+        };
   const { error } = await sb.from(TABLE).upsert(row);
   if (error) console.error("Sync push failed for", word, error);
 }
@@ -142,7 +153,7 @@ function subscribeRealtime() {
         if (payload.eventType === "DELETE" || row.deleted) {
           applyRemoteDelete(row.word);
         } else {
-          applyRemoteSet(row.word, row.translation);
+          applyRemoteSet(row.word, { translation: row.translation, status: row.status });
         }
         onChange();
       },

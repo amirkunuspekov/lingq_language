@@ -96,14 +96,19 @@ initReader(
 initWordList(
   {
     search: $("wl-search"),
-    tbody: $("wl-tbody"),
-    table: $("wl-table"),
+    list: $("wl-list"),
     empty: $("wl-empty"),
     count: $("wl-count"),
     exportBtn: $("wl-export"),
+    filters: $("wl-filters"),
+    overlay: $("overlay"),
+    addOpen: $("wl-add-open"),
+    addSheet: $("wl-add-sheet"),
+    addCancel: $("wl-add-cancel"),
     addForm: $("wl-add-form"),
     addWord: $("wl-add-word"),
     addTrans: $("wl-add-trans"),
+    addStatus: $("wl-add-status"),
   },
   onDictChange,
 );

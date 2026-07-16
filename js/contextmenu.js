@@ -220,13 +220,13 @@ function hideMenu() {
 // ---- Translation popover (on demand) ---------------------------------------
 
 function showTranslationPopover(highlightEl) {
-  const translation = getDict()[highlightEl.dataset.word] || "(no translation)";
+  const translation = getDict()[highlightEl.dataset.word]?.translation || "(no translation)";
   const rect = highlightEl.getBoundingClientRect();
   positionPopover(highlightEl.dataset.word, translation, rect.left + rect.width / 2, rect.top);
 }
 
 function showTextPopover(word, x, y) {
-  const translation = getDict()[word.toLowerCase()] || "(no translation)";
+  const translation = getDict()[word.toLowerCase()]?.translation || "(no translation)";
   positionPopover(word, translation, x, y);
 }
 
@@ -256,7 +256,7 @@ function openModal(word) {
   hideSelToolbar();
   hideMenu();
   els.modalWord.textContent = word;
-  const existing = getDict()[word.toLowerCase()] || "";
+  const existing = getDict()[word.toLowerCase()]?.translation || "";
   els.modalInput.value = existing;
   els.modal.classList.remove("hidden");
   els.overlay.classList.remove("hidden");

@@ -33,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 28;
+      window.APP_VERSION = 30;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -49,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=28" />
+    <link rel="stylesheet" href="css/styles.css?v=30" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -62,21 +62,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=28",
-          "./js/library.js": "./js/library.js?v=28",
-          "./js/reader.js": "./js/reader.js?v=28",
-          "./js/dictionary.js": "./js/dictionary.js?v=28",
-          "./js/translate.js": "./js/translate.js?v=28",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=28",
-          "./js/folder.js": "./js/folder.js?v=28",
-          "./js/sync.js": "./js/sync.js?v=28",
-          "./js/auth.js": "./js/auth.js?v=28",
-          "./js/storage.js": "./js/storage.js?v=28",
-          "./js/booksync.js": "./js/booksync.js?v=28",
-          "./js/import.js": "./js/import.js?v=28",
-          "./js/epub.js": "./js/epub.js?v=28",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=28",
-          "./js/config.js": "./js/config.js?v=28"
+          "./js/main.js": "./js/main.js?v=30",
+          "./js/library.js": "./js/library.js?v=30",
+          "./js/reader.js": "./js/reader.js?v=30",
+          "./js/dictionary.js": "./js/dictionary.js?v=30",
+          "./js/translate.js": "./js/translate.js?v=30",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=30",
+          "./js/folder.js": "./js/folder.js?v=30",
+          "./js/sync.js": "./js/sync.js?v=30",
+          "./js/auth.js": "./js/auth.js?v=30",
+          "./js/storage.js": "./js/storage.js?v=30",
+          "./js/booksync.js": "./js/booksync.js?v=30",
+          "./js/import.js": "./js/import.js?v=30",
+          "./js/epub.js": "./js/epub.js?v=30",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=30",
+          "./js/config.js": "./js/config.js?v=30"
         }
       }
     </script>
@@ -160,27 +160,27 @@
         <header class="view-head">
           <h1>Word List</h1>
           <div class="view-head-tools">
-            <span id="wl-count" class="wl-count">0 words</span>
-            <button id="wl-export" class="ghost-btn">⇩ Export CSV</button>
+            <button id="wl-export" class="link-btn">Export CSV</button>
+            <button id="wl-add-open" class="primary-btn wl-add-open">＋ Word</button>
           </div>
         </header>
-        <form id="wl-add-form" class="wl-add-form">
-          <input id="wl-add-word" class="wl-add-input" type="text" placeholder="Word" autocomplete="off" autocapitalize="none" />
-          <input id="wl-add-trans" class="wl-add-input" type="text" placeholder="Translation" autocomplete="off" />
-          <button id="wl-add-btn" type="submit" class="primary-btn wl-add-btn">Add</button>
-        </form>
+        <p id="wl-count" class="wl-count">0 words</p>
+
+        <!-- Status filter (design's Alle / Neu / Lerne / Gekonnt) -->
+        <div id="wl-filters" class="wl-filters" role="tablist">
+          <button class="wl-filter active" data-filter="all">All</button>
+          <button class="wl-filter" data-filter="new">New</button>
+          <button class="wl-filter" data-filter="learning">Learning</button>
+          <button class="wl-filter" data-filter="known">Known</button>
+        </div>
+
         <input id="wl-search" class="wl-search" type="search" placeholder="Search words or translations…" />
         <div id="wl-empty" class="empty-state">
           <svg class="empty-emoji" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="10" rx="2"/><path d="M7 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></svg>
           <p>No translated words yet.</p>
           <p class="empty-sub">Add one above, or open a book and select a word to translate it.</p>
         </div>
-        <table id="wl-table" class="wl-table hidden">
-          <thead>
-            <tr><th>Word</th><th>Translation</th><th></th></tr>
-          </thead>
-          <tbody id="wl-tbody"></tbody>
-        </table>
+        <div id="wl-list" class="wl-card hidden"></div>
       </main>
 
       <!-- Reader view (fullscreen) -->
@@ -233,6 +233,31 @@
          where there is no right-click). -->
     <button id="sel-toolbar" class="sel-toolbar hidden"></button>
 
+    <!-- Add-word sheet, opened by "＋ Word" on the Word List. -->
+    <div id="wl-add-sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="wl-add-title">
+      <div class="sheet-grabber"></div>
+      <h2 id="wl-add-title" class="sheet-title">Add word</h2>
+      <form id="wl-add-form">
+        <label class="field-label" for="wl-add-word">Word</label>
+        <input id="wl-add-word" class="field-input" type="text" placeholder="e.g. Brunnen" autocomplete="off" autocapitalize="none" />
+
+        <label class="field-label" for="wl-add-trans">Translation</label>
+        <input id="wl-add-trans" class="field-input" type="text" placeholder="fountain" autocomplete="off" />
+
+        <span class="field-label">Status</span>
+        <div id="wl-add-status" class="seg" role="radiogroup" aria-label="Status">
+          <button type="button" class="seg-item" data-status="new">New</button>
+          <button type="button" class="seg-item active" data-status="learning">Learning</button>
+          <button type="button" class="seg-item" data-status="known">Known</button>
+        </div>
+
+        <div class="sheet-actions">
+          <button id="wl-add-cancel" type="button" class="ghost-btn">Cancel</button>
+          <button id="wl-add-btn" type="submit" class="primary-btn">Add</button>
+        </div>
+      </form>
+    </div>
+
     <div id="translation-modal" class="translation-modal hidden">
       <p class="modal-label">Translation for</p>
       <p id="modal-word" class="modal-word"></p>
@@ -243,6 +268,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=28"></script>
+    <script type="module" src="js/main.js?v=30"></script>
   </body>
 </html>
