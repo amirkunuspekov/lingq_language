@@ -65,6 +65,28 @@ export async function deleteBook(id) {
   await reqToPromise(store.delete(id));
 }
 
+// Erase everything belonging to `ownerId` from THIS device: their cached books
+// and their word list. Called on sign-out.
+//
+// Why this is necessary: there is one IndexedDB database for every user who has
+// ever signed in on this browser, and the owner check in the library only *hides*
+// other users' books. Without this purge, the next person to use the device could
+// read the previous user's full book text and word list straight out of DevTools.
+// Safe to delete: the cloud is the source of truth and everything re-pulls on the
+// next sign-in. Folder books are shared and re-parsed from books/, so they stay.
+export async function purgeLocalUserData(ownerId) {
+  if (!ownerId) return;
+  for (const book of await getAllBooks()) {
+    if (book.source === "folder") continue;
+    if (book.owner === ownerId) await deleteBook(book.id);
+  }
+  try {
+    localStorage.removeItem(`${DICT_KEY}:${ownerId}`);
+  } catch {
+    /* ignore */
+  }
+}
+
 // Optional push hook (installed by the sync layer) for reading position.
 let progressPushFn = null;
 export function setProgressPush(fn) {
@@ -130,7 +152,21 @@ function loadDict() {
 }
 
 function persistDict() {
-  localStorage.setItem(dictKey(), JSON.stringify(dict));
+  try {
+    localStorage.setItem(dictKey(), JSON.stringify(dict));
+  } catch (e) {
+    // Quota exceeded / private-mode write failure must not take down the caller
+    // (setEntry is called straight from the save button).
+    console.error("Dictionary save failed:", e);
+  }
+}
+
+// Bumped on every dictionary mutation. Lets callers cache derived values (e.g.
+// the library's per-book saved-word count) against a key that actually changes
+// when the contents change — a size-based key misses a delete+add replacement.
+let dictVersion = 0;
+export function getDictVersion() {
+  return dictVersion;
 }
 
 // Switch the active user; reloads that user's cached dictionary into memory.
@@ -138,10 +174,7 @@ function persistDict() {
 export function setActiveUser(userId) {
   activeUser = userId || null;
   dict = loadDict();
-}
-
-export function getActiveUser() {
-  return activeUser;
+  dictVersion++;
 }
 
 // Returns the live in-memory dictionary object. Keys are lowercased words.
@@ -160,6 +193,7 @@ export function setSyncPush(fn) {
 export function setEntry(word, translation) {
   const w = word.toLowerCase();
   dict[w] = translation;
+  dictVersion++;
   persistDict();
   if (pushFn) pushFn("set", w, translation);
 }
@@ -167,6 +201,7 @@ export function setEntry(word, translation) {
 export function deleteEntry(word) {
   const w = word.toLowerCase();
   delete dict[w];
+  dictVersion++;
   persistDict();
   if (pushFn) pushFn("delete", w);
 }
@@ -178,10 +213,12 @@ export function hasEntry(word) {
 // Apply a change that came FROM the server (no re-push).
 export function applyRemoteSet(word, translation) {
   dict[word.toLowerCase()] = translation;
+  dictVersion++;
   persistDict();
 }
 
 export function applyRemoteDelete(word) {
   delete dict[word.toLowerCase()];
+  dictVersion++;
   persistDict();
 }

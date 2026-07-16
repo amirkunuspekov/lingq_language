@@ -36,7 +36,11 @@ export function render() {
   const dict = getDict();
   const query = (els.search.value || "").trim().toLowerCase();
   const words = Object.keys(dict)
-    .filter((w) => !query || w.includes(query) || dict[w].toLowerCase().includes(query))
+    // String(...) guard: a non-string translation arriving from sync would throw
+    // here and take down the entire word-list render.
+    .filter(
+      (w) => !query || w.includes(query) || String(dict[w] ?? "").toLowerCase().includes(query),
+    )
     .sort((a, b) => a.localeCompare(b));
 
   els.count.textContent = `${Object.keys(dict).length} word${

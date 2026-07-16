@@ -21,8 +21,12 @@ export async function lookupTranslation(text) {
   const url =
     `${ENDPOINT}?q=${encodeURIComponent(q)}` +
     `&langpair=${encodeURIComponent(LOOKUP_LANGPAIR)}`;
+  // Without a timeout a hung request leaves the field stuck on "Looking up…"
+  // forever; abort and fall back to manual entry instead.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: ctrl.signal });
     const data = await res.json();
     // A successful translation comes back with responseStatus 200; quota/errors
     // return a non-200 status and put a warning string in translatedText.
@@ -32,6 +36,8 @@ export async function lookupTranslation(text) {
     cache.set(key, translation);
     return translation;
   } catch {
-    return null; // network/offline — caller falls back to manual entry
+    return null; // network/offline/timeout — caller falls back to manual entry
+  } finally {
+    clearTimeout(timer);
   }
 }

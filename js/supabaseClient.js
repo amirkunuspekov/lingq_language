@@ -21,7 +21,11 @@ let clientPromise = null;
 export function getClient() {
   if (!isConfigured()) return Promise.resolve(null);
   if (!clientPromise) {
-    clientPromise = import("https://esm.sh/@supabase/supabase-js@2")
+    // Pinned to an exact version, not a floating "@2": a dynamic import can't
+    // carry Subresource Integrity, so the version string is the only control we
+    // have over what code esm.sh hands us. (This is the version "@2" already
+    // resolved to — pinning changes nothing today, it just stops it drifting.)
+    clientPromise = import("https://esm.sh/@supabase/supabase-js@2.110.6")
       .then(({ createClient }) =>
         createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: { persistSession: true, autoRefreshToken: true },

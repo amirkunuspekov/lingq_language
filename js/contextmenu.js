@@ -58,8 +58,16 @@ export function initContextMenu(refs, dictChangeCallback) {
   // Modal wiring.
   els.modalSave.addEventListener("click", saveTranslation);
   els.modalInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveTranslation();
-    if (e.key === "Escape") closeModal();
+    // Belt-and-braces with the reader's own guard: never let the modal's keys
+    // reach the document-level reader shortcuts (Escape → exit, arrows → flip).
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.stopPropagation();
+      saveTranslation();
+    }
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      closeModal();
+    }
   });
   els.overlay.addEventListener("mousedown", closeModal);
 }

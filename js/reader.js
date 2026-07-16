@@ -34,6 +34,12 @@ export function initReader(refs, exitCallback) {
 
   document.addEventListener("keydown", (e) => {
     if (els.view.classList.contains("hidden")) return;
+    // The translation modal is a sibling of the reader, so the reader stays
+    // "visible" while it's open. Without these guards, Escape in the modal would
+    // also exit to the library, and the arrow keys would flip pages behind it
+    // while you type a translation.
+    if (els.overlay && !els.overlay.classList.contains("hidden")) return;
+    if (e.target?.closest?.("input, textarea, select, [contenteditable]")) return;
     if (e.key === "ArrowRight") flip(+1);
     else if (e.key === "ArrowLeft") flip(-1);
     else if (e.key === "Escape") onExit();

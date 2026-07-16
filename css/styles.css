@@ -265,6 +265,10 @@ body {
   color: #d33;
   font-size: 13px;
 }
+/* Same slot as the error, but for success/info messages. */
+.auth-error.notice {
+  color: var(--text-dim);
+}
 
 /* ---- Main views ----------------------------------------------- */
 

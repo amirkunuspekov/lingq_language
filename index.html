@@ -33,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 27;
+      window.APP_VERSION = 28;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -49,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=27" />
+    <link rel="stylesheet" href="css/styles.css?v=28" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -62,27 +62,33 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=27",
-          "./js/library.js": "./js/library.js?v=27",
-          "./js/reader.js": "./js/reader.js?v=27",
-          "./js/dictionary.js": "./js/dictionary.js?v=27",
-          "./js/translate.js": "./js/translate.js?v=27",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=27",
-          "./js/folder.js": "./js/folder.js?v=27",
-          "./js/sync.js": "./js/sync.js?v=27",
-          "./js/auth.js": "./js/auth.js?v=27",
-          "./js/storage.js": "./js/storage.js?v=27",
-          "./js/booksync.js": "./js/booksync.js?v=27",
-          "./js/import.js": "./js/import.js?v=27",
-          "./js/epub.js": "./js/epub.js?v=27",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=27",
-          "./js/config.js": "./js/config.js?v=27"
+          "./js/main.js": "./js/main.js?v=28",
+          "./js/library.js": "./js/library.js?v=28",
+          "./js/reader.js": "./js/reader.js?v=28",
+          "./js/dictionary.js": "./js/dictionary.js?v=28",
+          "./js/translate.js": "./js/translate.js?v=28",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=28",
+          "./js/folder.js": "./js/folder.js?v=28",
+          "./js/sync.js": "./js/sync.js?v=28",
+          "./js/auth.js": "./js/auth.js?v=28",
+          "./js/storage.js": "./js/storage.js?v=28",
+          "./js/booksync.js": "./js/booksync.js?v=28",
+          "./js/import.js": "./js/import.js?v=28",
+          "./js/epub.js": "./js/epub.js?v=28",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=28",
+          "./js/config.js": "./js/config.js?v=28"
         }
       }
     </script>
 
-    <!-- JSZip: used to unzip .epub files. -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- JSZip: used to unzip .epub files. Subresource Integrity pins the exact
+         bytes — if the CDN is compromised or DNS hijacked, the browser refuses to
+         run the script rather than handing an attacker the Supabase session. -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+      integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <!-- Auth gate (shown only when Supabase is configured and no session) -->
@@ -237,6 +243,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=27"></script>
+    <script type="module" src="js/main.js?v=28"></script>
   </body>
 </html>

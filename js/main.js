@@ -77,6 +77,7 @@ initLibrary(
 initReader(
   {
     view: readerView,
+    overlay: $("overlay"), // shown behind the translation modal; suppresses reader keys
     viewport: $("page-viewport"),
     bookText: $("book-text"),
     title: $("reader-title"),

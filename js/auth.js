@@ -3,12 +3,14 @@
 // Supabase isn't configured, there is no gate and the app runs local-only.
 
 import { isConfigured, getClient } from "./supabaseClient.js";
+import { purgeLocalUserData } from "./storage.js";
 
 const $ = (id) => document.getElementById(id);
 
 let cbs = { onAuth: () => {}, onSignOut: () => {} };
 let els = null;
 let sb = null;
+let currentUserId = null; // whose local cache to purge on sign-out
 
 export async function initAuth(callbacks) {
   cbs = callbacks;
@@ -66,6 +68,7 @@ export async function initAuth(callbacks) {
 
 function enterApp(user) {
   hideGate();
+  currentUserId = user.id;
   els.whoami.textContent = user.email || "";
   els.signout.classList.remove("hidden");
   // Avatar initial for the mobile account button.
@@ -95,15 +98,28 @@ async function signUp() {
   if (data.session) {
     enterApp(data.user); // email confirmation disabled -> immediate session
   } else {
-    showError("Account created. Check your email to confirm, then sign in.");
+    // This is a success, not a failure — don't render it in the error style.
+    showNotice("Account created. Check your email to confirm, then sign in.");
   }
 }
 
 async function signOut() {
-  await sb.auth.signOut();
-  // Full reload is the simplest reliable teardown (clears in-memory caches,
-  // realtime channels, and the reader), then the gate shows again.
-  location.reload();
+  const uid = currentUserId;
+  try {
+    await sb.auth.signOut();
+  } catch (e) {
+    console.error("Sign-out failed:", e);
+  }
+  // Reloading only tears down memory, not disk — wipe this user's cached books
+  // and word list so the next person on this device can't read them. Everything
+  // re-pulls from the cloud on the next sign-in.
+  try {
+    await purgeLocalUserData(uid);
+  } catch (e) {
+    console.error("Local purge failed:", e);
+  }
+  currentUserId = null;
+  cbs.onSignOut(); // full reload — the reliable teardown; the gate shows again
 }
 
 function showGate() {
@@ -116,8 +132,15 @@ function hideGate() {
 }
 function showError(msg) {
   els.err.textContent = msg;
+  els.err.classList.remove("hidden", "notice");
+}
+// Same slot, neutral styling — for messages that aren't failures.
+function showNotice(msg) {
+  els.err.textContent = msg;
   els.err.classList.remove("hidden");
+  els.err.classList.add("notice");
 }
 function clearError() {
   els.err.classList.add("hidden");
+  els.err.classList.remove("notice");
 }

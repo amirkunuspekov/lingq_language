@@ -2,7 +2,7 @@
 // cover cards, Apple Books style. Handles import (button + drag/drop) and
 // opening/removing books.
 
-import { getAllBooks, deleteBook, getDict } from "./storage.js";
+import { getAllBooks, deleteBook, getDict, getDictVersion } from "./storage.js";
 import { importFiles } from "./import.js";
 
 let els = null;
@@ -153,14 +153,22 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Flatten a book's chapters into plain text (HTML tags stripped).
+// Flatten a book's chapters into lowercased plain text (HTML tags stripped).
+// Cached per book id: the text never changes after import, and stripping a
+// megabyte-scale string on every render (nav switch, search keystroke, realtime
+// progress event) is far too expensive to redo.
+const plainTextCache = new Map();
 function bookPlainText(book) {
-  return (book.chapters || [])
+  if (plainTextCache.has(book.id)) return plainTextCache.get(book.id);
+  const text = (book.chapters || [])
     .map((c) => (c.html ? c.html.replace(/<[^>]+>/g, " ") : c.text || ""))
-    .join(" ");
+    .join(" ")
+    .toLowerCase();
+  plainTextCache.set(book.id, text);
+  return text;
 }
 
-// Total word count, cached per book id (the text never changes after import).
+// Total word count, cached per book id.
 const wordCountCache = new Map();
 function totalWords(book) {
   if (wordCountCache.has(book.id)) return wordCountCache.get(book.id);
@@ -171,16 +179,17 @@ function totalWords(book) {
 }
 
 // How many of the user's saved words actually occur in this book. One pass with
-// the same Unicode-aware whole-word matcher the reader uses. Cached by book id +
-// dictionary size so it only recomputes when the word list changes.
+// the same Unicode-aware whole-word matcher the reader uses. Keyed on the
+// dictionary's version rather than its size — a delete+add replacement leaves the
+// size unchanged and would otherwise serve a stale count until reload.
 const savedInBookCache = new Map();
 function savedWordsInBook(book) {
   const words = Object.keys(getDict());
   if (!words.length) return 0;
-  const key = `${book.id}:${words.length}`;
+  const key = `${book.id}:${getDictVersion()}`;
   if (savedInBookCache.has(key)) return savedInBookCache.get(key);
 
-  const text = bookPlainText(book).toLowerCase();
+  const text = bookPlainText(book);
   const alt = words.map(escapeRegex).join("|");
   const re = new RegExp(`(?<![\\p{L}\\p{N}])(${alt})(?![\\p{L}\\p{N}])`, "giu");
   const found = new Set();
@@ -363,8 +372,3 @@ function bookCard(book) {
   return card;
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-  );
-}

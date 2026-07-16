@@ -2,10 +2,22 @@
 //   { title, author, coverBlob, chapters: [{ title, text }] }
 // Uses JSZip (loaded globally from a CDN <script> in index.html).
 
+// Percent-decode, tolerating malformed sequences (a bare "%" is not fatal).
+function safeDecode(s) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 // Resolve an href relative to the directory of a base path (both zip-internal).
+// EPUB manifest hrefs are URI references, so a file named "chapter 1.xhtml" is
+// legally written href="chapter%201.xhtml" — but JSZip keys entries by their raw
+// name, so the lookup must be decoded first or the chapter silently vanishes.
 function resolvePath(basePath, href) {
   const baseDir = basePath.includes("/") ? basePath.replace(/\/[^/]*$/, "/") : "";
-  const stack = (baseDir + href).split("/");
+  const stack = safeDecode(baseDir + href).split("/");
   const out = [];
   for (const part of stack) {
     if (part === "." || part === "") continue;
@@ -132,6 +144,15 @@ function extractHtml(doc, css) {
   body
     .querySelectorAll("script,iframe,object,embed,img,image,svg,audio,video,link,meta,title,noscript,style")
     .forEach((el) => el.remove());
+  // The tag list above is a denylist, and this markup is about to be mounted into
+  // a live shadow root. Inline handlers on tags it doesn't cover (<details
+  // ontoggle>, <input autofocus onfocus>, <marquee onstart>) would survive, so
+  // strip every on* attribute rather than relying on the host being hidden.
+  body.querySelectorAll("*").forEach((el) => {
+    for (const attr of [...el.attributes]) {
+      if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+    }
+  });
 
   let host = null;
   try {
@@ -164,13 +185,26 @@ export async function parseEpub(file) {
   }
   const zip = await JSZip.loadAsync(file);
 
-  // 1. container.xml -> path of the .opf package document.
-  const containerXml = await zip.file("META-INF/container.xml").async("string");
-  const container = parseXml(containerXml);
-  const opfPath = container.querySelector("rootfile").getAttribute("full-path");
+  // 1. container.xml -> path of the .opf package document. Each step is checked
+  //    so a malformed file reports what's actually wrong instead of surfacing a
+  //    "Cannot read properties of null" in the import alert.
+  const containerFile = zip.file("META-INF/container.xml");
+  if (!containerFile) {
+    throw new Error("Not a valid EPUB (missing META-INF/container.xml).");
+  }
+  const container = parseXml(await containerFile.async("string"));
+  const rootfile = container.querySelector("rootfile");
+  const opfPath = rootfile?.getAttribute("full-path");
+  if (!opfPath) {
+    throw new Error("Not a valid EPUB (container.xml has no rootfile path).");
+  }
 
   // 2. Parse the .opf: metadata, manifest, spine.
-  const opf = parseXml(await zip.file(opfPath).async("string"));
+  const opfFile = zip.file(safeDecode(opfPath));
+  if (!opfFile) {
+    throw new Error(`Not a valid EPUB (package file "${opfPath}" is missing).`);
+  }
+  const opf = parseXml(await opfFile.async("string"));
 
   const title =
     opf.querySelector("metadata > title, title")?.textContent?.trim() ||
