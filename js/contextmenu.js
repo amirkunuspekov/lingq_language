@@ -2,17 +2,30 @@
 //   • Desktop: right-click a word -> "Add translation"; right-click a highlight
 //     -> "Show translation" / "Remove".
 //   • Touch (no right-click): selecting a word shows a floating button, and
-//     tapping an existing highlight opens the same menu.
-// "Show translation" is deliberately an explicit action, never a hover, so the
-// reader never reveals the meaning by accident.
+//     tapping an existing highlight opens the study card.
+// Tapping a saved word opens a self-test card rather than just printing the
+// meaning: the translation starts blurred, you recall it, reveal, then grade
+// yourself. The meaning is never revealed by accident — no hover path exists.
 
-import { setEntry, deleteEntry, hasEntry, getDict } from "./storage.js";
+import {
+  setEntry,
+  deleteEntry,
+  hasEntry,
+  getDict,
+  setStatus,
+} from "./storage.js";
 import { lookupTranslation } from "./translate.js";
 
 let els = null;
 let onDictChange = () => {};
 let pendingWord = ""; // word awaiting a translation in the modal
 let lookupToken = 0; // guards against a stale auto-fill landing on a new word
+
+// Stands in for the translation on the study card until it's revealed. Blurred
+// by CSS into a soft smear, so it reads as "hidden text" — but it is the SAME
+// for every word, which is the whole point: the real translation's length must
+// not be visible before you've tried to recall it.
+const MASK_TEXT = `Geradeaus`;
 
 // Captured when the selection toolbar is shown, so a tap on the button still
 // works even after the tap collapses the selection (common on mobile).
@@ -45,10 +58,14 @@ export function initContextMenu(refs, dictChangeCallback) {
     if (!els.menu.contains(e.target)) hideMenu();
     if (els.popover && !els.popover.contains(e.target)) hidePopover();
   });
-  document.addEventListener("scroll", () => {
-    hidePopover();
-    hideSelToolbar();
-  }, true);
+  document.addEventListener(
+    "scroll",
+    () => {
+      hidePopover();
+      hideSelToolbar();
+    },
+    true,
+  );
   window.addEventListener("resize", () => {
     hideMenu();
     hidePopover();
@@ -124,19 +141,18 @@ function onSelToolbarClick() {
   }
 }
 
+// Tapping a saved word goes straight to the study card — the old two-item menu
+// ("Show translation" / "Remove") was a step in front of the thing you wanted,
+// and Remove now lives in the card itself.
 function onReaderClick(e) {
   const highlight = e.target.closest(".custom-highlight");
   if (!highlight) return;
   // Only treat it as a tap when nothing is being selected (so drag-selecting
-  // that ends on a highlight doesn't trigger the menu).
+  // that ends on a highlight doesn't trigger the card).
   const sel = window.getSelection();
   if (sel && !sel.isCollapsed) return;
-  const rect = highlight.getBoundingClientRect();
-  const word = highlight.dataset.word;
-  showMenu(rect.left + rect.width / 2, rect.bottom + 4, [
-    { label: "Show translation", action: () => showTranslationPopover(highlight) },
-    { label: "Remove translation", danger: true, action: () => removeWord(word) },
-  ]);
+  hideMenu();
+  showTranslationPopover(highlight);
 }
 
 function onContextMenu(e) {
@@ -148,8 +164,15 @@ function onContextMenu(e) {
     e.preventDefault();
     const word = highlight.dataset.word;
     showMenu(e.clientX, e.clientY, [
-      { label: "Show translation", action: () => showTranslationPopover(highlight) },
-      { label: "Remove translation", danger: true, action: () => removeWord(word) },
+      {
+        label: "Show translation",
+        action: () => showTranslationPopover(highlight),
+      },
+      {
+        label: "Remove translation",
+        danger: true,
+        action: () => removeWord(word),
+      },
     ]);
     return;
   }
@@ -217,25 +240,120 @@ function hideMenu() {
   els.menu.classList.add("hidden");
 }
 
-// ---- Translation popover (on demand) ---------------------------------------
+// ---- Study card (on demand) ------------------------------------------------
+// Tapping a saved word opens this rather than just printing the meaning: the
+// translation starts blurred so you get a beat to recall it, Reveal shows it,
+// then you grade yourself — Fail marks the word "learning", Success "known".
 
 function showTranslationPopover(highlightEl) {
-  const translation = getDict()[highlightEl.dataset.word]?.translation || "(no translation)";
+  const translation =
+    getDict()[highlightEl.dataset.word]?.translation || "(no translation)";
   const rect = highlightEl.getBoundingClientRect();
-  positionPopover(highlightEl.dataset.word, translation, rect.left + rect.width / 2, rect.top);
+  showCard(
+    highlightEl.dataset.word,
+    translation,
+    rect.left + rect.width / 2,
+    rect.top,
+  );
 }
 
 function showTextPopover(word, x, y) {
-  const translation = getDict()[word.toLowerCase()]?.translation || "(no translation)";
-  positionPopover(word, translation, x, y);
+  const translation =
+    getDict()[word.toLowerCase()]?.translation || "(no translation)";
+  showCard(word, translation, x, y);
 }
 
-function positionPopover(word, translation, centerX, topY) {
+function showCard(word, translation, centerX, topY) {
   const pop = els.popover;
-  pop.innerHTML = `<span class="pop-word">${escapeHtml(word)}</span><span class="pop-trans">${escapeHtml(
-    translation,
-  )}</span>`;
+  pop.innerHTML = "";
+
+  // Head: the word, plus a Remove — tapping a highlight no longer opens the
+  // menu that used to carry it, and touch has no right-click fallback.
+  const head = document.createElement("div");
+  head.className = "pop-head";
+  const headword = document.createElement("span");
+  headword.className = "pop-word";
+  headword.textContent = word;
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "pop-remove";
+  remove.textContent = "Remove";
+  remove.title = `Remove “${word}” from your word list`;
+  remove.addEventListener("click", () => {
+    hidePopover();
+    removeWord(word);
+  });
+  head.append(headword, remove);
+
+  // The hidden translation. The real text is never rendered before the reveal —
+  // a blurred version of it would leak its length, and its line count would leak
+  // through the card's height even at opacity 0. So a fixed-size mask stands in
+  // for it, and the translation is held out of flow until it's revealed.
+  const slot = document.createElement("div");
+  slot.className = "pop-slot";
+
+  const mask = document.createElement("div");
+  mask.className = "pop-mask";
+  mask.textContent = MASK_TEXT;
+  mask.setAttribute("aria-hidden", "true");
+
+  const trans = document.createElement("div");
+  trans.className = "pop-trans";
+  trans.textContent = translation;
+
+  slot.append(mask, trans);
+
+  const actions = document.createElement("div");
+  actions.className = "pop-actions";
+
+  const reveal = document.createElement("button");
+  reveal.type = "button";
+  reveal.className = "pop-btn pop-primary";
+  reveal.textContent = "Reveal translation";
+
+  const fail = document.createElement("button");
+  fail.type = "button";
+  fail.className = "pop-btn pop-secondary";
+  fail.textContent = "Fail";
+  fail.addEventListener("click", () => grade(word, "learning"));
+
+  const success = document.createElement("button");
+  success.type = "button";
+  success.className = "pop-btn pop-primary";
+  success.textContent = "Success";
+  success.addEventListener("click", () => grade(word, "known"));
+
+  // Revealing crossfades the mask out and the translation in, and swaps the
+  // single button for the two grading ones. The mask is a reveal target too —
+  // that's where the eye already is.
+  const doReveal = () => {
+    slot.classList.add("revealed");
+    actions.replaceChildren(fail, success);
+  };
+  reveal.addEventListener("click", doReveal);
+  slot.addEventListener("click", () => {
+    if (!slot.classList.contains("revealed")) doReveal();
+  });
+
+  actions.appendChild(reveal);
+  pop.append(head, slot, actions);
   pop.classList.remove("hidden");
+  positionPopover(centerX, topY);
+}
+
+// Record how the self-test went. setStatus ignores unknown words, so the
+// "(no translation)" edge case can't write a bogus entry.
+function grade(word, status) {
+  setStatus(word, status);
+  hidePopover();
+  window.getSelection()?.removeAllRanges();
+  onDictChange();
+}
+
+// Anchor the card above the word, flipping below and clamping to the viewport
+// when there's no room. Must run after the card is populated and visible.
+function positionPopover(centerX, topY) {
+  const pop = els.popover;
   const rect = pop.getBoundingClientRect();
   let left = centerX - rect.width / 2;
   left = Math.max(8, Math.min(left, window.innerWidth - rect.width - 8));
@@ -305,10 +423,4 @@ function saveTranslation() {
 function removeWord(word) {
   deleteEntry(word);
   onDictChange();
-}
-
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
-  );
 }

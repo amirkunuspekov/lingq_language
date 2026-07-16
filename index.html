@@ -33,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 31;
+      window.APP_VERSION = 36;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -49,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=31" />
+    <link rel="stylesheet" href="css/styles.css?v=36" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -62,21 +62,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=31",
-          "./js/library.js": "./js/library.js?v=31",
-          "./js/reader.js": "./js/reader.js?v=31",
-          "./js/dictionary.js": "./js/dictionary.js?v=31",
-          "./js/translate.js": "./js/translate.js?v=31",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=31",
-          "./js/folder.js": "./js/folder.js?v=31",
-          "./js/sync.js": "./js/sync.js?v=31",
-          "./js/auth.js": "./js/auth.js?v=31",
-          "./js/storage.js": "./js/storage.js?v=31",
-          "./js/booksync.js": "./js/booksync.js?v=31",
-          "./js/import.js": "./js/import.js?v=31",
-          "./js/epub.js": "./js/epub.js?v=31",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=31",
-          "./js/config.js": "./js/config.js?v=31"
+          "./js/main.js": "./js/main.js?v=36",
+          "./js/library.js": "./js/library.js?v=36",
+          "./js/reader.js": "./js/reader.js?v=36",
+          "./js/dictionary.js": "./js/dictionary.js?v=36",
+          "./js/translate.js": "./js/translate.js?v=36",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=36",
+          "./js/folder.js": "./js/folder.js?v=36",
+          "./js/sync.js": "./js/sync.js?v=36",
+          "./js/auth.js": "./js/auth.js?v=36",
+          "./js/storage.js": "./js/storage.js?v=36",
+          "./js/booksync.js": "./js/booksync.js?v=36",
+          "./js/import.js": "./js/import.js?v=36",
+          "./js/epub.js": "./js/epub.js?v=36",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=36",
+          "./js/config.js": "./js/config.js?v=36"
         }
       }
     </script>
@@ -312,6 +312,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=31"></script>
+    <script type="module" src="js/main.js?v=36"></script>
   </body>
 </html>

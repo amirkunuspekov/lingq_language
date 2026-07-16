@@ -4,70 +4,71 @@
    ============================================================ */
 
 :root {
-  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-    system-ui, sans-serif;
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
+    sans-serif;
   /* Newsreader is the reading + display serif (loaded in index.html); Georgia
      is the offline fallback. */
   --font-read: "Newsreader", Georgia, "Times New Roman", serif;
   --font-display: "Newsreader", Georgia, serif;
 
   /* Warm paper, not cold white. */
-  --bg: #E7E4DD; /* greige canvas */
-  --panel: #FCFAF5; /* card / surface */
-  --sidebar-bg: #F1EFE8;
-  --text: #211F1A; /* near-black ink */
-  --text-dim: #7A7266; /* secondary */
-  --text-faint: #A79F92; /* eyebrows / labels */
-  --border: #DED8CC;
-  --accent: #BC5E3A; /* terracotta */
-  --accent-hover: #9E4B2C;
-  --accent-soft: #F1E4DB; /* soft terracotta tint */
+  --bg: #e7e4dd; /* greige canvas */
+  --panel: #fcfaf5; /* card / surface */
+  --sidebar-bg: #f1efe8;
+  --text: #211f1a; /* near-black ink */
+  --text-dim: #7a7266; /* secondary */
+  --text-faint: #a79f92; /* eyebrows / labels */
+  --border: #ded8cc;
+  --accent: #bc5e3a; /* terracotta */
+  --accent-hover: #9e4b2c;
+  --accent-soft: #f1e4db; /* soft terracotta tint */
   --shadow: 0 22px 48px -22px rgba(60, 45, 30, 0.34);
   --shadow-sm: 0 8px 22px -12px rgba(60, 45, 30, 0.22);
 
-  --reader-bg: #FCFAF5;
-  --reader-page: #FCFAF5;
-  --reader-text: #2A2822;
-  --highlight-bg: #F8E3BC; /* soft amber marker */
-  --highlight-ring: #E8A94F; /* active / hover */
+  --reader-bg: #fcfaf5;
+  --reader-page: #fcfaf5;
+  --reader-text: #2a2822;
+  --highlight-bg: #f8e3bc; /* soft amber marker */
+  --highlight-ring: #e8a94f; /* active / hover */
 }
 
 :root[data-theme="sepia"] {
-  --bg: #EFE7D6;
-  --panel: #F7F1E4;
-  --sidebar-bg: #F0E8D8;
-  --text: #33291B;
-  --text-dim: #7C6E58;
-  --text-faint: #A79A80;
-  --border: #E0D4BC;
-  --accent-soft: #EFE0CC;
+  --bg: #efe7d6;
+  --panel: #f7f1e4;
+  --sidebar-bg: #f0e8d8;
+  --text: #33291b;
+  --text-dim: #7c6e58;
+  --text-faint: #a79a80;
+  --border: #e0d4bc;
+  --accent-soft: #efe0cc;
 
-  --reader-bg: #F3EAD8;
-  --reader-page: #F3EAD8;
-  --reader-text: #43392A;
-  --highlight-bg: #ECD39A;
-  --highlight-ring: #D8A85A;
+  --reader-bg: #f3ead8;
+  --reader-page: #f3ead8;
+  --reader-text: #43392a;
+  --highlight-bg: #ecd39a;
+  --highlight-ring: #d8a85a;
 }
 
 :root[data-theme="dark"] {
-  --bg: #201E1A; /* warm dark, not blue-black */
-  --panel: #2A2723;
-  --sidebar-bg: #24211D;
-  --text: #EFEAE0;
-  --text-dim: #A79F92;
-  --text-faint: #857D70;
-  --border: #3A362F;
-  --accent: #E0794F; /* warmer terracotta for dark */
-  --accent-hover: #EC8A5F;
-  --accent-soft: #3A2A20;
+  --bg: #201e1a; /* warm dark, not blue-black */
+  --panel: #2a2723;
+  --sidebar-bg: #24211d;
+  --text: #efeae0;
+  --text-dim: #a79f92;
+  --text-faint: #857d70;
+  --border: #3a362f;
+  --accent: #e0794f; /* warmer terracotta for dark */
+  --accent-hover: #ec8a5f;
+  --accent-soft: #3a2a20;
   --shadow: 0 22px 48px -22px rgba(0, 0, 0, 0.6);
   --shadow-sm: 0 8px 22px -12px rgba(0, 0, 0, 0.5);
 
-  --reader-bg: #1B1916;
-  --reader-page: #201E1A;
-  --reader-text: #D9D3C7;
-  --highlight-bg: #5A4A22;
-  --highlight-ring: #8A6A2E;
+  --reader-bg: #1b1916;
+  --reader-page: #201e1a;
+  --reader-text: #d9d3c7;
+  --highlight-bg: #5a4a22;
+  --highlight-ring: #8a6a2e;
 }
 
 * {
@@ -315,7 +316,9 @@ body {
   border-radius: 18px;
   background: var(--panel);
   text-align: center;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 .dropzone.drag-over {
   border-color: var(--accent);
@@ -470,7 +473,9 @@ body {
   padding: 14px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
 }
 .reading-now:hover {
   box-shadow: var(--shadow);
@@ -569,7 +574,9 @@ body {
   border-radius: 6px;
   overflow: hidden;
   box-shadow: var(--shadow);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 /* subtle spine shading down the left edge */
 .book-cover-wrap::before {
@@ -579,11 +586,7 @@ body {
   left: 0;
   width: 10px;
   height: 100%;
-  background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0.22),
-    rgba(0, 0, 0, 0)
-  );
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0));
   z-index: 1;
 }
 .book-card:hover .book-cover-wrap,
@@ -615,7 +618,9 @@ body {
   text-align: center;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
@@ -744,7 +749,7 @@ body {
   color: var(--accent);
 }
 .wl-add-open {
-  padding: 8px 14px;
+  padding: 8px 10px !important;
   font-size: 14px;
   white-space: nowrap;
 }
@@ -1051,7 +1056,8 @@ body {
   letter-spacing: -0.01em;
   margin: 0.2em 0 0.8em;
   padding-bottom: 0.3em;
-  border-bottom: 2px solid color-mix(in srgb, var(--reader-text) 22%, transparent);
+  border-bottom: 2px solid
+    color-mix(in srgb, var(--reader-text) 22%, transparent);
 }
 .book-text h2 {
   font-size: 1.45em;
@@ -1255,6 +1261,9 @@ body {
   background: var(--accent-soft);
   color: var(--accent);
 }
+.ctx-item.danger {
+  color: #d33a2c;
+}
 .ctx-item.danger:hover {
   background: #fdecec;
   color: #d33;
@@ -1271,13 +1280,16 @@ body {
   font-size: 15px;
   padding: 11px 18px;
   border-radius: 13px;
-  box-shadow: 0 14px 30px -12px rgba(60, 45, 30, 0.5),
+  box-shadow:
+    0 14px 30px -12px rgba(60, 45, 30, 0.5),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   white-space: nowrap;
   -webkit-user-select: none;
   user-select: none;
-  transition: background 0.15s ease, transform 0.1s ease;
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
 }
 .sel-toolbar:hover {
   background: var(--accent-hover);
@@ -1286,31 +1298,141 @@ body {
   transform: scale(0.97);
 }
 
+/* ---- Study card (tap a saved word in the reader) --------------- */
+
 .translation-popover {
   position: fixed;
   z-index: 1000;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 20px;
   box-shadow: var(--shadow);
-  padding: 16px 18px;
-  max-width: 280px;
+  padding: 18px 18px 16px;
+  width: min(320px, calc(100vw - 24px));
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+}
+
+.pop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 .pop-word {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1.05;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
+.pop-remove {
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  padding: 2px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.pop-remove:hover {
+  color: var(--accent);
+}
+
+/* The translation slot. Its height is fixed at two lines and the mask is a
+   constant width, so NOTHING about the hidden translation — length, line count,
+   card height — is observable until you reveal it. Two lines fits virtually
+   every translation, so the card doesn't resize on reveal either. */
+.pop-slot {
+  position: relative;
+  min-height: 52px; /* 2 lines at 19px/1.35 */
+  cursor: pointer;
+}
+/* The inline padding gives the mask's soft edges somewhere to fade out into.
+   It's on BOTH so the smear and the revealed word share a left edge — otherwise
+   the text visibly slides sideways during the crossfade.
+   `flex-start` matters for the same reason vertically: the revealed translation
+   drops back into normal flow at the TOP of the slot, so the mask has to sit on
+   that first line too, or the word jumps up as it fades in. The mask's box still
+   spans both reserved lines, and nothing clips it, so the blur is free to bleed
+   down into the empty second line. */
+.pop-mask,
 .pop-trans {
+  position: absolute;
+  inset: 0;
+  padding: 0 10px;
+  display: flex;
+  align-items: flex-start;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.35;
-  color: var(--text-dim);
+  transition: opacity 0.2s ease;
+}
+
+/* Blurred by hiding the glyphs and drawing them as their own soft shadow —
+   NOT with `filter: blur()`, which promotes the element to a compositing layer
+   and leaves a ghosted haze behind on iOS once it animates back out. The shadow
+   needs a literal colour: currentColor is transparent here. */
+/* No `overflow: hidden` here — it clips the shadow's bleed into a hard edge,
+   which is the one thing a blur must never have. `nowrap` alone keeps the
+   fixed-width mask on one line. */
+.pop-mask {
+  color: transparent;
+  text-shadow: 0 0 8px var(--text);
+  opacity: 1;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pop-trans {
+  color: var(--text);
+  overflow-wrap: anywhere;
+  opacity: 0;
+}
+
+.pop-slot.revealed .pop-mask {
+  opacity: 0;
+}
+/* Back into flow on reveal, so a translation longer than the two reserved lines
+   can still grow the card. Any resize here is harmless — the word is already out. */
+.pop-slot.revealed .pop-trans {
+  position: static;
+  opacity: 1;
+}
+
+.pop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.pop-btn {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 10px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pop-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.pop-primary:hover {
+  background: var(--accent-hover);
+}
+.pop-secondary {
+  background: rgba(128, 128, 128, 0.13);
+  color: var(--text);
+}
+.pop-secondary:hover {
+  background: rgba(128, 128, 128, 0.2);
 }
 
 /* Add-word sheet: a centered card on desktop, a bottom sheet on phones. */
@@ -1445,8 +1567,13 @@ body {
   animation: lookup-pulse 1s ease-in-out infinite;
 }
 @keyframes lookup-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.9; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.9;
+  }
 }
 .modal-actions {
   display: flex;
@@ -1677,7 +1804,9 @@ body {
     transform: translateY(-100%);
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
   }
   .reader-view.chrome-visible .reader-bar {
     transform: translateY(0);
