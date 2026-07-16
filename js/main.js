@@ -62,6 +62,8 @@ initLibrary(
     view: libraryView,
     grid: $("book-grid"),
     hero: $("reading-now"),
+    heroLabel: $("reading-now-label"),
+    search: $("library-search"),
     emptyState: $("library-empty"),
     importBtn: $("import-btn"),
     fileInput: $("file-input"),

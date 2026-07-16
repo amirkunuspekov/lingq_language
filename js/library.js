@@ -2,7 +2,7 @@
 // cover cards, Apple Books style. Handles import (button + drag/drop) and
 // opening/removing books.
 
-import { getAllBooks, deleteBook } from "./storage.js";
+import { getAllBooks, deleteBook, getDict } from "./storage.js";
 import { importFiles } from "./import.js";
 
 let els = null;
@@ -29,6 +29,9 @@ export function initLibrary(refs, openBookCallback) {
     e.target.value = "";
     await handleImport(files);
   });
+
+  // Live-filter the library as the user types.
+  if (els.search) els.search.addEventListener("input", () => render());
 
   // Drag & drop anywhere on the library.
   els.view.addEventListener("dragover", (e) => {
@@ -89,16 +92,24 @@ export async function render() {
     console.error("Library render: getAllBooks failed:", err);
   }
 
-  // Reading Now hero = most recently opened book (if any).
-  const hero = books.find((b) => b.lastOpenedAt) || books[0];
+  // Search filters the "All Books" grid by title/author. The Reading Now hero is
+  // the current book, so it's hidden while searching to keep results focused.
+  const q = (els.search?.value || "").trim().toLowerCase();
+  const searching = q.length > 0;
+  const shown = searching
+    ? books.filter((b) => `${b.title} ${b.author}`.toLowerCase().includes(q))
+    : books;
+
+  const hero = searching ? null : books.find((b) => b.lastOpenedAt) || books[0];
   const grid = els.grid;
   grid.innerHTML = "";
 
   try {
-    renderHero(hero, books.length);
+    renderHero(hero);
   } catch (err) {
     console.error("Library render: hero failed:", err);
     els.hero.classList.add("hidden");
+    els.heroLabel?.classList.add("hidden");
   }
 
   if (books.length === 0) {
@@ -107,7 +118,15 @@ export async function render() {
   }
   els.emptyState.classList.add("hidden");
 
-  for (const book of books) {
+  if (shown.length === 0) {
+    const note = document.createElement("p");
+    note.className = "lib-noresults";
+    note.textContent = `No books match “${q}”.`;
+    grid.appendChild(note);
+    return;
+  }
+
+  for (const book of shown) {
     try {
       grid.appendChild(bookCard(book));
     } catch (err) {
@@ -126,14 +145,81 @@ function readingProgress(book) {
   return n ? Math.min(1, (loc.chapter || 0) / n) : 0;
 }
 
-function renderHero(book, total) {
+// ---- Reading stats (compact Reading Now card) ------------------------------
+
+const WORDS_PER_MIN = 200; // average adult silent reading speed
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Flatten a book's chapters into plain text (HTML tags stripped).
+function bookPlainText(book) {
+  return (book.chapters || [])
+    .map((c) => (c.html ? c.html.replace(/<[^>]+>/g, " ") : c.text || ""))
+    .join(" ");
+}
+
+// Total word count, cached per book id (the text never changes after import).
+const wordCountCache = new Map();
+function totalWords(book) {
+  if (wordCountCache.has(book.id)) return wordCountCache.get(book.id);
+  const m = bookPlainText(book).match(/\S+/g);
+  const n = m ? m.length : 0;
+  wordCountCache.set(book.id, n);
+  return n;
+}
+
+// How many of the user's saved words actually occur in this book. One pass with
+// the same Unicode-aware whole-word matcher the reader uses. Cached by book id +
+// dictionary size so it only recomputes when the word list changes.
+const savedInBookCache = new Map();
+function savedWordsInBook(book) {
+  const words = Object.keys(getDict());
+  if (!words.length) return 0;
+  const key = `${book.id}:${words.length}`;
+  if (savedInBookCache.has(key)) return savedInBookCache.get(key);
+
+  const text = bookPlainText(book).toLowerCase();
+  const alt = words.map(escapeRegex).join("|");
+  const re = new RegExp(`(?<![\\p{L}\\p{N}])(${alt})(?![\\p{L}\\p{N}])`, "giu");
+  const found = new Set();
+  let m;
+  while ((m = re.exec(text)) !== null) found.add(m[1]);
+  savedInBookCache.set(key, found.size);
+  return found.size;
+}
+
+// "~12 min left · 47 words saved" — reading time from remaining words, plus how
+// many saved words appear in the book.
+function heroStats(book, started) {
+  const parts = [];
+  const total = totalWords(book);
+  if (total > 0) {
+    const remaining = started ? total * (1 - readingProgress(book)) : total;
+    const mins = Math.max(1, Math.round(remaining / WORDS_PER_MIN));
+    parts.push(started ? `~${mins} min left` : `~${mins} min`);
+  }
+  const saved = savedWordsInBook(book);
+  if (saved > 0) parts.push(`${saved} word${saved === 1 ? "" : "s"} saved`);
+  return parts.join(" · ");
+}
+
+// Compact, fully-tappable "Reading Now" card (design's Weiterlesen). The label
+// above it ("Continue Reading") is a separate section heading.
+function renderHero(book) {
+  const labelEl = els.heroLabel;
   if (!book) {
     els.hero.classList.add("hidden");
+    labelEl?.classList.add("hidden");
     return;
   }
-  els.hero.classList.remove("hidden");
   const started = !!book.lastOpenedAt;
-  const label = started ? "Continue Reading" : "Start Reading";
+  els.hero.classList.remove("hidden");
+  if (labelEl) {
+    labelEl.textContent = started ? "Continue Reading" : "Start Reading";
+    labelEl.classList.remove("hidden");
+  }
   els.hero.innerHTML = "";
 
   const cover = document.createElement("img");
@@ -143,35 +229,34 @@ function renderHero(book, total) {
 
   const info = document.createElement("div");
   info.className = "hero-info";
-  info.innerHTML = `
-    <p class="hero-eyebrow">Reading Now</p>
-    <h2 class="hero-title">${escapeHtml(book.title)}</h2>
-    <p class="hero-author">${escapeHtml(book.author)}</p>
-    <p class="hero-meta">${(book.chapters?.length ?? 0)} chapter${
-      (book.chapters?.length ?? 0) === 1 ? "" : "s"
-    } · ${total} book${total === 1 ? "" : "s"} in library</p>
-  `;
 
-  // Progress bar (only once the book has actually been opened).
+  const title = document.createElement("h2");
+  title.className = "hero-title";
+  title.textContent = book.title;
+
+  const author = document.createElement("p");
+  author.className = "hero-author";
+  author.textContent = book.author;
+  info.append(title, author);
+
   if (started) {
     const pct = Math.round(readingProgress(book) * 100);
     const prog = document.createElement("div");
     prog.className = "hero-progress";
-    prog.innerHTML = `
-      <div class="hero-progress-track"><div class="hero-progress-fill" style="width:${pct}%"></div></div>
-      <span class="hero-progress-pct">${pct}%</span>
-    `;
+    prog.innerHTML = `<div class="hero-progress-track"><div class="hero-progress-fill" style="width:${pct}%"></div></div><span class="hero-progress-pct">${pct}%</span>`;
     info.appendChild(prog);
   }
 
-  const btn = document.createElement("button");
-  btn.className = "hero-btn";
-  btn.textContent = label;
-  btn.addEventListener("click", () => onOpenBook(book.id));
-  info.appendChild(btn);
+  const stats = heroStats(book, started);
+  if (stats) {
+    const s = document.createElement("p");
+    s.className = "hero-stats";
+    s.textContent = stats;
+    info.appendChild(s);
+  }
 
   els.hero.append(cover, info);
-  cover.addEventListener("click", () => onOpenBook(book.id));
+  els.hero.onclick = () => onOpenBook(book.id);
 }
 
 // Remove a book from the library (local + cloud). Shared by the ⋯ menu and the

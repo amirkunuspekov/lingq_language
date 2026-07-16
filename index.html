@@ -33,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 25;
+      window.APP_VERSION = 27;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -49,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=25" />
+    <link rel="stylesheet" href="css/styles.css?v=27" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -62,21 +62,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=25",
-          "./js/library.js": "./js/library.js?v=25",
-          "./js/reader.js": "./js/reader.js?v=25",
-          "./js/dictionary.js": "./js/dictionary.js?v=25",
-          "./js/translate.js": "./js/translate.js?v=25",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=25",
-          "./js/folder.js": "./js/folder.js?v=25",
-          "./js/sync.js": "./js/sync.js?v=25",
-          "./js/auth.js": "./js/auth.js?v=25",
-          "./js/storage.js": "./js/storage.js?v=25",
-          "./js/booksync.js": "./js/booksync.js?v=25",
-          "./js/import.js": "./js/import.js?v=25",
-          "./js/epub.js": "./js/epub.js?v=25",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=25",
-          "./js/config.js": "./js/config.js?v=25"
+          "./js/main.js": "./js/main.js?v=27",
+          "./js/library.js": "./js/library.js?v=27",
+          "./js/reader.js": "./js/reader.js?v=27",
+          "./js/dictionary.js": "./js/dictionary.js?v=27",
+          "./js/translate.js": "./js/translate.js?v=27",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=27",
+          "./js/folder.js": "./js/folder.js?v=27",
+          "./js/sync.js": "./js/sync.js?v=27",
+          "./js/auth.js": "./js/auth.js?v=27",
+          "./js/storage.js": "./js/storage.js?v=27",
+          "./js/booksync.js": "./js/booksync.js?v=27",
+          "./js/import.js": "./js/import.js?v=27",
+          "./js/epub.js": "./js/epub.js?v=27",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=27",
+          "./js/config.js": "./js/config.js?v=27"
         }
       }
     </script>
@@ -135,6 +135,9 @@
           <h1>Library</h1>
         </header>
 
+        <input id="library-search" class="lib-search" type="search" placeholder="Search your library…" autocomplete="off" autocapitalize="none" />
+
+        <h3 id="reading-now-label" class="section-label hidden">Continue Reading</h3>
         <section id="reading-now" class="reading-now hidden"></section>
 
         <h3 class="section-label">All Books</h3>
@@ -234,6 +237,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=25"></script>
+    <script type="module" src="js/main.js?v=27"></script>
   </body>
 </html>
