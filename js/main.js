@@ -26,25 +26,36 @@ const $ = (id) => document.getElementById(id);
 
 const libraryView = $("library-view");
 const wordlistView = $("wordlist-view");
+const importView = $("import-view");
 const readerView = $("reader-view");
 const sidebar = $("sidebar");
+const tabBar = $("tab-bar");
 
+// The main views share the app shell (header + bottom tabs); the reader is
+// fullscreen. "import" is only reachable from the phone's tab bar — on desktop
+// the sidebar's ＋ Import Book button covers it.
 function showMain(view) {
-  // Library and Word List share the sidebar layout; the reader is fullscreen.
   readerView.classList.add("hidden");
   sidebar.classList.remove("hidden");
+  tabBar.classList.remove("hidden");
   libraryView.classList.toggle("hidden", view !== "library");
   wordlistView.classList.toggle("hidden", view !== "wordlist");
+  importView.classList.toggle("hidden", view !== "import");
   $("nav-library").classList.toggle("active", view === "library");
   $("nav-wordlist").classList.toggle("active", view === "wordlist");
+  for (const tab of tabBar.querySelectorAll(".tab-item[data-view]")) {
+    tab.classList.toggle("active", tab.dataset.view === view);
+  }
   if (view === "wordlist") renderWordList();
-  if (view === "library") renderLibrary();
+  if (view === "library" || view === "import") renderLibrary();
 }
 
 function showReader() {
   libraryView.classList.add("hidden");
   wordlistView.classList.add("hidden");
+  importView.classList.add("hidden");
   sidebar.classList.add("hidden");
+  tabBar.classList.add("hidden");
   readerView.classList.remove("hidden");
 }
 
@@ -67,6 +78,11 @@ initLibrary(
     emptyState: $("library-empty"),
     importBtn: $("import-btn"),
     fileInput: $("file-input"),
+    // Import screen (phone tab bar).
+    dropzone: $("dropzone"),
+    chooseBtn: $("import-choose"),
+    recentList: $("import-recent"),
+    recentEmpty: $("import-recent-empty"),
   },
   async (id) => {
     showReader(); // reveal first so the reader viewport can be measured
@@ -134,6 +150,21 @@ initContextMenu(
 $("nav-library").addEventListener("click", () => showMain("library"));
 $("nav-wordlist").addEventListener("click", () => showMain("wordlist"));
 
+// Bottom tab bar (phones). Library/Words/Import are views; Profile just opens
+// the existing account dropdown, anchored to the avatar in the header.
+tabBar.addEventListener("click", (e) => {
+  const tab = e.target.closest(".tab-item");
+  if (!tab) return;
+  if (tab.dataset.view) {
+    showMain(tab.dataset.view);
+    return;
+  }
+  // Profile: stop the click here, or it would reach auth.js's document-level
+  // "outside click" listener and close the menu we're about to open.
+  e.stopPropagation();
+  $("account-btn").click();
+});
+
 // Contents (table of contents) panel toggle inside the reader.
 $("reader-contents").addEventListener("click", () => {
   $("contents-panel").classList.toggle("hidden");
@@ -157,6 +188,7 @@ setLibraryContext({
   getOwnerId: () => currentUser?.id || null,
   onImported: (book) => uploadBook(book),
   onDeleted: (id) => deleteBookRemote(id),
+  afterImport: () => showMain("library"),
 });
 
 let currentUser = null;

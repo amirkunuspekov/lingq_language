@@ -13,6 +13,7 @@ let ctx = {
   getOwnerId: () => null, // current user's id, or null in local-only mode
   onImported: () => {}, // (book) => push to cloud
   onDeleted: () => {}, // (id)   => remove from cloud
+  afterImport: () => {}, // () => route back to the library so the book is visible
 };
 
 export function setLibraryContext(context) {
@@ -33,20 +34,27 @@ export function initLibrary(refs, openBookCallback) {
   // Live-filter the library as the user types.
   if (els.search) els.search.addEventListener("input", () => render());
 
-  // Drag & drop anywhere on the library.
-  els.view.addEventListener("dragover", (e) => {
+  // Drag & drop: anywhere on the library, and on the Import screen's drop-zone.
+  wireDropTarget(els.view);
+  if (els.dropzone) wireDropTarget(els.dropzone);
+
+  // Import screen's "Choose file" button reuses the one hidden <input>.
+  els.chooseBtn?.addEventListener("click", () => els.fileInput.click());
+}
+
+// Accept .epub/.txt dropped onto `el`, highlighting it while a drag is over it.
+function wireDropTarget(el) {
+  el.addEventListener("dragover", (e) => {
     e.preventDefault();
-    els.view.classList.add("drag-over");
+    el.classList.add("drag-over");
   });
-  els.view.addEventListener("dragleave", (e) => {
-    if (e.target === els.view) els.view.classList.remove("drag-over");
+  el.addEventListener("dragleave", (e) => {
+    if (e.target === el) el.classList.remove("drag-over");
   });
-  els.view.addEventListener("drop", async (e) => {
+  el.addEventListener("drop", async (e) => {
     e.preventDefault();
-    els.view.classList.remove("drag-over");
-    const files = [...e.dataTransfer.files].filter((f) =>
-      /\.(epub|txt)$/i.test(f.name),
-    );
+    el.classList.remove("drag-over");
+    const files = [...e.dataTransfer.files].filter((f) => /\.(epub|txt)$/i.test(f.name));
     await handleImport(files);
   });
 }
@@ -58,6 +66,9 @@ async function handleImport(files) {
   // Push each new book to the user's cloud library (no-op when local-only).
   if (owner) for (const book of books) ctx.onImported(book);
   await render();
+  // Imports started from the Import screen should land on the new book, not on
+  // the (now stale-looking) Import screen.
+  if (books.length) ctx.afterImport();
 }
 
 // Cover is stored as a data-URL string on the book — use it directly.
@@ -112,6 +123,14 @@ export async function render() {
     els.heroLabel?.classList.add("hidden");
   }
 
+  // The Import screen's "Recent" list shares this data, so keep it in step —
+  // it must be updated before the empty-library early return below.
+  try {
+    renderRecent(books);
+  } catch (err) {
+    console.error("Library render: recent list failed:", err);
+  }
+
   if (books.length === 0) {
     els.emptyState.classList.remove("hidden");
     return;
@@ -132,6 +151,50 @@ export async function render() {
     } catch (err) {
       console.error("Library render: card failed for", book?.id, err);
     }
+  }
+}
+
+// ---- Import screen's "Recent" list -----------------------------------------
+
+const RECENT_LIMIT = 4;
+
+// The last few books this user imported, newest first. Folder books aren't
+// imports, so they're left out.
+function renderRecent(books) {
+  const list = els.recentList;
+  if (!list) return;
+  list.innerHTML = "";
+
+  const recent = books
+    .filter((b) => b.source !== "folder")
+    .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
+    .slice(0, RECENT_LIMIT);
+
+  els.recentEmpty?.classList.toggle("hidden", recent.length > 0);
+
+  for (const book of recent) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "recent-row";
+
+    const cover = document.createElement("img");
+    cover.className = "recent-cover";
+    cover.src = coverUrl(book);
+    cover.alt = "";
+
+    const info = document.createElement("div");
+    info.className = "recent-info";
+    const title = document.createElement("span");
+    title.className = "recent-title";
+    title.textContent = book.title;
+    const meta = document.createElement("span");
+    meta.className = "recent-meta";
+    meta.textContent = book.author;
+    info.append(title, meta);
+
+    row.append(cover, info);
+    row.addEventListener("click", () => onOpenBook(book.id));
+    list.appendChild(row);
   }
 }
 

@@ -296,6 +296,135 @@ body {
   gap: 14px;
 }
 
+.view-sub {
+  margin: -16px 0 24px;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* ---- Import screen (phones; reached from the bottom tab bar) --- */
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 34px 20px;
+  border: 1.5px dashed var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.dropzone-ico {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 8px;
+  color: var(--text-faint);
+}
+.dropzone-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+}
+.dropzone-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* "or" with a rule running through it. */
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+.or-divider::before,
+.or-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.import-choose {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+}
+
+.import-recent-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.import-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.recent-row:active {
+  background: var(--accent-soft);
+}
+.recent-cover {
+  width: 34px;
+  height: 50px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: var(--shadow-sm);
+}
+.recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.recent-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-meta {
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Bottom tab bar (phones only; see the 720px block) --------- */
+
+.tab-bar {
+  display: none;
+}
+
 .section-label {
   font-size: 12px;
   font-weight: 700;
@@ -1354,9 +1483,8 @@ body {
     grid-template-rows: auto 1fr;
   }
 
-  /* The sidebar becomes a compact two-row header:
-       row 1:  📖 Books ..................... (A) avatar
-       row 2:  [Library] [Word List] ... [＋ Import Book]      */
+  /* The sidebar shrinks to a single-row header — brand on the left, avatar on
+     the right. Navigation and Import moved into the bottom tab bar. */
   #sidebar {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1380,30 +1508,56 @@ body {
     padding: 0;
     border-top: none;
   }
-  .nav {
-    grid-column: 1;
-    grid-row: 2;
-    flex-direction: row;
-    gap: 6px;
-    min-width: 0;
-  }
-  .nav-item {
-    padding: 8px 12px;
-    border-radius: 999px;
-    font-size: 14px;
-    white-space: nowrap;
-  }
-  .import-btn {
-    grid-column: 2;
-    grid-row: 2;
-    justify-self: end;
-    margin-top: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    white-space: nowrap;
-  }
+  /* Both now live in the tab bar. */
+  .nav,
+  .import-btn,
   .sidebar-foot {
     display: none;
+  }
+
+  /* Translucent bottom tab bar, floating above the home indicator. */
+  .tab-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: var(--panel); /* fallback where color-mix is unsupported */
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(1.7);
+    backdrop-filter: blur(20px) saturate(1.7);
+    border-top: 1px solid var(--border);
+  }
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0 4px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--text-dim);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tab-item.active {
+    color: var(--accent);
+  }
+  .tab-ico {
+    width: 23px;
+    height: 23px;
+  }
+
+  /* Keep the last row of content clear of the tab bar. */
+  .main-scroll {
+    padding: 20px 20px calc(84px + env(safe-area-inset-bottom));
   }
 
   /* Account: round avatar button; the email + sign-out live in a dropdown. */
@@ -1441,9 +1595,6 @@ body {
   }
   .whoami {
     font-size: 13px;
-  }
-  .main-scroll {
-    padding: 20px;
   }
 
   /* The add-word form is a bottom sheet on phones (design's Wort hinzufügen). */

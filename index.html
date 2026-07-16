@@ -33,7 +33,7 @@
          forced to pull a fresh index.html (which cascades to fresh modules).
          On deploy, bump APP_VERSION here to match the new ?v=N and version.json. -->
     <script>
-      window.APP_VERSION = 30;
+      window.APP_VERSION = 31;
       (async () => {
         try {
           const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -49,7 +49,7 @@
       })();
     </script>
 
-    <link rel="stylesheet" href="css/styles.css?v=30" />
+    <link rel="stylesheet" href="css/styles.css?v=31" />
 
     <!-- Cache-busting for iOS Safari. Because this is an ES-modules app, the
          entry script's query (below) does NOT refresh the modules it imports —
@@ -62,21 +62,21 @@
     <script type="importmap">
       {
         "imports": {
-          "./js/main.js": "./js/main.js?v=30",
-          "./js/library.js": "./js/library.js?v=30",
-          "./js/reader.js": "./js/reader.js?v=30",
-          "./js/dictionary.js": "./js/dictionary.js?v=30",
-          "./js/translate.js": "./js/translate.js?v=30",
-          "./js/contextmenu.js": "./js/contextmenu.js?v=30",
-          "./js/folder.js": "./js/folder.js?v=30",
-          "./js/sync.js": "./js/sync.js?v=30",
-          "./js/auth.js": "./js/auth.js?v=30",
-          "./js/storage.js": "./js/storage.js?v=30",
-          "./js/booksync.js": "./js/booksync.js?v=30",
-          "./js/import.js": "./js/import.js?v=30",
-          "./js/epub.js": "./js/epub.js?v=30",
-          "./js/supabaseClient.js": "./js/supabaseClient.js?v=30",
-          "./js/config.js": "./js/config.js?v=30"
+          "./js/main.js": "./js/main.js?v=31",
+          "./js/library.js": "./js/library.js?v=31",
+          "./js/reader.js": "./js/reader.js?v=31",
+          "./js/dictionary.js": "./js/dictionary.js?v=31",
+          "./js/translate.js": "./js/translate.js?v=31",
+          "./js/contextmenu.js": "./js/contextmenu.js?v=31",
+          "./js/folder.js": "./js/folder.js?v=31",
+          "./js/sync.js": "./js/sync.js?v=31",
+          "./js/auth.js": "./js/auth.js?v=31",
+          "./js/storage.js": "./js/storage.js?v=31",
+          "./js/booksync.js": "./js/booksync.js?v=31",
+          "./js/import.js": "./js/import.js?v=31",
+          "./js/epub.js": "./js/epub.js?v=31",
+          "./js/supabaseClient.js": "./js/supabaseClient.js?v=31",
+          "./js/config.js": "./js/config.js?v=31"
         }
       }
     </script>
@@ -183,6 +183,29 @@
         <div id="wl-list" class="wl-card hidden"></div>
       </main>
 
+      <!-- Import view (reached from the mobile tab bar; the desktop sidebar
+           keeps its own ＋ Import Book button and never shows this screen). -->
+      <main id="import-view" class="view main-scroll hidden">
+        <header class="view-head">
+          <h1>Import</h1>
+        </header>
+        <p class="view-sub">Your books stay on your device.</p>
+
+        <div id="dropzone" class="dropzone">
+          <svg class="dropzone-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="M12 17v-6"/><path d="m9.5 13.5 2.5-2.5 2.5 2.5"/></svg>
+          <p class="dropzone-title">Drop a book here</p>
+          <p class="dropzone-sub">EPUB or plain text</p>
+        </div>
+
+        <div class="or-divider"><span>or</span></div>
+
+        <button id="import-choose" class="primary-btn import-choose">Choose file</button>
+
+        <h3 class="section-label">Recent</h3>
+        <p id="import-recent-empty" class="import-recent-empty">Nothing imported yet.</p>
+        <div id="import-recent" class="import-recent"></div>
+      </main>
+
       <!-- Reader view (fullscreen) -->
       <div id="reader-view" class="reader-view hidden">
         <header class="reader-bar">
@@ -221,6 +244,27 @@
           <div id="contents-list" class="contents-list"></div>
         </div>
       </div>
+
+      <!-- Bottom tab bar — phones only (CSS hides it above 720px, where the
+           sidebar nav does this job). Hidden inside the reader. -->
+      <nav id="tab-bar" class="tab-bar" aria-label="Main">
+        <button id="tab-library" class="tab-item active" data-view="library">
+          <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.5 5.3 8.5 4.8 4.5 5v13c4-.2 6 .3 7.5 1.5 1.5-1.2 3.5-1.7 7.5-1.5V5c-4-.2-6 .3-7.5 1.5Z"/><path d="M12 6.5V19"/></svg>
+          <span class="tab-label">Library</span>
+        </button>
+        <button id="tab-wordlist" class="tab-item" data-view="wordlist">
+          <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="10" rx="2"/><path d="M7 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2"/></svg>
+          <span class="tab-label">Words</span>
+        </button>
+        <button id="tab-import" class="tab-item" data-view="import">
+          <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          <span class="tab-label">Import</span>
+        </button>
+        <button id="tab-profile" class="tab-item">
+          <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 19.5a7.5 7.5 0 0 1 14.4 0"/></svg>
+          <span class="tab-label">Profile</span>
+        </button>
+      </nav>
     </div>
 
     <!-- Shared overlays -->
@@ -268,6 +312,6 @@
       <p class="modal-hint">⌘/Ctrl + Enter to save · Esc to cancel</p>
     </div>
 
-    <script type="module" src="js/main.js?v=30"></script>
+    <script type="module" src="js/main.js?v=31"></script>
   </body>
 </html>
