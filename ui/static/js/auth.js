@@ -35,7 +35,9 @@ export async function initAuth(callbacks) {
     e.stopPropagation();
     els.accountMenu.classList.toggle("open");
   });
-  document.addEventListener("click", () => els.accountMenu.classList.remove("open"));
+  document.addEventListener("click", () =>
+    els.accountMenu.classList.remove("open"),
+  );
 
   // Local-only mode: no auth, no gate.
   if (!isConfigured()) {
@@ -85,6 +87,19 @@ async function signIn() {
   });
   if (error) return showError(error.message);
   enterApp(data.user);
+}
+
+async function signInGo() {
+  const response = await fetch("/api/signin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: els.email.value.trim(),
+      password: els.pass.value,
+    }),
+  });
 }
 
 async function signUp() {
